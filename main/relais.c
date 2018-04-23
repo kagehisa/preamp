@@ -6,16 +6,26 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+#include "driver/gpio.h"
+#include "msg_stuff.h"
 #include "nv_acc.h"
 #include "relais.h"
 
+
+/* Structure that represents the state of the relais and the corresponding GPIO pins  */
 relais_state relais = { 
 	{ RELAIS_GPIO_1, RELAIS_GPIO_2, RELAIS_GPIO_3, RELAIS_GPIO_4, RELAIS_GPIO_5 },
 	{ STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF } 
       };
 
+/* handle for the nvm access  */
 nvs_handle relais_handle;
+
+/* key string for the nvm values  */
 const char* rel_key = "relais_state";
+
+
+/* Module helper functions  */
 
 static uint8_t init_relais_state( void )
 {
@@ -38,33 +48,6 @@ static uint8_t init_relais_state( void )
 
    return ret;
 }
-
-
-uint8_t init_relais()
-{
-/* Initialises the relays with the last state stored in nvram or in a clear state 
- * */
-   uint8_t ret, active=0;
-
-   ret = init_relais_state();
-   printf("debug msg init func; ret = %i \n", ret);
-   if(ret)
-   {
-     active = get_active_relais();
-	printf("active = %i \n", active);     
-     if(active != 0)
-     {
-	printf("switching on %i \n", active);     
-      switch_relais_on(active);
-     }else{
-      switch_relais_off(OUTPUT_OFF);
-	printf("switching off %i \n", active);     
-     }
-   }
- return ret;
-}
-
-
 
 
 static uint8_t get_gpio_by_index(uint8_t index)
@@ -96,6 +79,34 @@ static uint8_t active_relais_count( void )
  return count;
 }
 
+/* Public functions  */
+
+uint8_t init_relais( void )
+{
+/* Initialises the relays with the last state stored in nvram or
+ * if no nv value is available with a clear all off state 
+ * */
+
+   uint8_t ret, active=0;
+
+   ret = init_relais_state();
+   MSG("debug msg init func; ret = %i \n", ret);
+   if(ret)
+   {
+     active = get_active_relais();
+	MSG("active = %i \n", active);     
+     if(active != 0)
+     {
+	MSG("switching on %i \n", active);     
+      switch_relais_on(active);
+     }else{
+      switch_relais_off(OUTPUT_OFF);
+	MSG("switching off %i \n", active);     
+     }
+   }
+ return ret;
+}
+
 uint8_t switch_relais_on(uint8_t relais_num)
 {
 
@@ -103,23 +114,26 @@ uint8_t switch_relais_on(uint8_t relais_num)
  * Returns the level that has been set.
  * relais_num is a number from 1 to NUM_RELAIS 
  * */
-  if(active_relais_count() == 0)
+  if(active_relais_count() == 0 || relais_num == get_active_relais())
   {
-    uint8_t gpio_num, ret;
+     uint8_t gpio_num, ret;
 
-    gpio_num = get_gpio_by_index(relais_num-1);
-    //TODO: if ERR no select
-    gpio_pad_select_gpio(gpio_num);
-    gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
-    gpio_set_level(gpio_num, 1);
+     gpio_num = get_gpio_by_index(relais_num-1);
+   
+     gpio_pad_select_gpio(gpio_num);
+     gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
+     gpio_set_level(gpio_num, 1);
 
-    (&relais)->state[relais_num-1] = STATE_ON;
+     (&relais)->state[relais_num-1] = STATE_ON;
 
-    ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
+     ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
+
     return ( (ret) ? get_state_by_index(relais_num-1) : REL_ERR );
-  }else{
-   return REL_ERR;
+ 
   }
+
+  return REL_ERR; // more than on active relais and desired active relais != current active one....
+
 }
 
 

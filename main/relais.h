@@ -6,7 +6,9 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include "driver/gpio.h"
+#ifndef RELAIS_H
+#define RELAIS_H
+
 #include "sdkconfig.h"
 
 /* Can run 'make menuconfig' to choose the GPIO to blink,
@@ -22,8 +24,8 @@
 #define STATE_ON  1
 
 #define OUTPUT_OFF 255
-#define RELAIS_NUM 5
 #define REL_ERR 128
+#define RELAIS_NUM 5
 
 typedef struct relais_state
 {
@@ -31,10 +33,18 @@ typedef struct relais_state
    uint8_t state[RELAIS_NUM];
 }relais_state;
 
+/* Init function, that sets the last stored 
+ * nv relay sate active or initializes the 
+ * state struct if no values available  */
 uint8_t init_relais( void );
 
+/* activates the gpio output responsible for the desired relais */
 uint8_t switch_relais_on(uint8_t relais_num);
 
+/* deactivates the gpio output responsible for the desired relais  */
 uint8_t switch_relais_off(uint8_t relais_num);
 
+/* get the currently active relais number */
 uint8_t get_active_relais( void );
+
+#endif /* RELAIS_H */

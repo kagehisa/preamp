@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "msg_stuff.h"
 #include "relais.h"
 
 void switch_task(void *pvParameter)
@@ -30,13 +31,13 @@ void switch_task(void *pvParameter)
         for(i = 1; i <= 5; i++)
 	{
 		/* relais on */
-		printf("switching on relais %i \n", i);
+		MSG("switching on relais %i \n", i);
         	switch_relais_on(i);
-        	vTaskDelay(4000 / portTICK_PERIOD_MS);
+        	vTaskDelay(3000 / portTICK_PERIOD_MS);
         	/* relais off */
-		printf("switching off relais %i \n", i);
+		MSG("switching off relais %i \n", i);
         	switch_relais_off(i);
-        	vTaskDelay(2000 / portTICK_PERIOD_MS);
+        	vTaskDelay(3000 / portTICK_PERIOD_MS);
        	}
      }
     }

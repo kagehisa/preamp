@@ -1,7 +1,7 @@
 menu "Relais GPIO Pins"
 
 config RELAIS_GPIO_1
-    int "Relais GPIO number"
+    int "Relais 1 GPIO number"
 	range 0 34
 	default 23
 	help
@@ -13,7 +13,7 @@ config RELAIS_GPIO_1
 
 
 config RELAIS_GPIO_2
-    int "Relais GPIO number"
+    int "Relais 2 GPIO number"
 	range 0 34
 	default 22
 	help
@@ -24,7 +24,7 @@ config RELAIS_GPIO_2
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
 config RELAIS_GPIO_3
-    int "Relais GPIO number"
+    int "Relais 3 GPIO number"
 	range 0 34
 	default 21
 	help
@@ -35,7 +35,7 @@ config RELAIS_GPIO_3
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
 config RELAIS_GPIO_4
-    int "Relais GPIO number"
+    int "Relais 4 GPIO number"
 	range 0 34
 	default 19
 	help
@@ -46,7 +46,7 @@ config RELAIS_GPIO_4
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
 config RELAIS_GPIO_5
-    int "Relais GPIO number"
+    int "Relais 5 GPIO number"
 	range 0 34
 	default 18
 	help
@@ -56,4 +56,14 @@ config RELAIS_GPIO_5
 
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
+endmenu
+
+
+menu "MSG ouput disable"
+
+config MSG_SILENT
+    bool "Disable printf based Message ouput"
+    default 0
+    help
+		Disable MSG output for the target <make monitor>
 endmenu
