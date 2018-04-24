@@ -27,12 +27,12 @@ xQueueHandle pcnt_evt_queue;   // A queue to handle pulse counter events
 static void IRAM_ATTR quad_enc_isr(void *arg)
 {
     uint32_t intr_status = PCNT.int_st.val;
-    uint8_t i;
+    uint8_t i = 0;
     pcnt_evt_t evt;
     portBASE_TYPE HPTaskAwoken = pdFALSE;
 
-    for (i = 0; i < PCNT_UNIT_MAX; i++) 
-    {
+    //for (i = 0; i < PCNT_UNIT_MAX; i++) 
+    //{
         if (intr_status & (BIT(i))) 
         {
             evt.unit = i;
@@ -46,7 +46,7 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
                 portYIELD_FROM_ISR();
             }
         }
-    }
+    //}
 }
 
 static void enc_gpio_init() 
@@ -70,8 +70,8 @@ void encoder_counter_init(quad_encoder_mode enc_mode)
               .neg_mode = PCNT_COUNT_DIS,            // Keep the counter value on the negative edge
               .lctrl_mode = PCNT_MODE_KEEP,          // Reverse counting direction if low
               .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
-              .counter_h_lim = PCNT_H_LIM_VAL,
-              .counter_l_lim = PCNT_L_LIM_VAL,
+             // .counter_h_lim = PCNT_H_LIM_VAL,
+             // .counter_l_lim = PCNT_L_LIM_VAL,
     };
 
    switch (enc_mode) 
@@ -82,17 +82,23 @@ void encoder_counter_init(quad_encoder_mode enc_mode)
        pcnt_config.neg_mode = PCNT_COUNT_DEC;
        break;
     case QUAD_ENC_MODE_4:
-      // Doesn't appear to be possible to handle 4X mode with the PCNT. THis mode requires the count to increment when the CONTROL input changes.
+      // Doesn't appear to be possible to handle 4X mode with the PCNT. 
+      // This mode requires the count to increment when the CONTROL input changes.
       break;
    }
 
     pcnt_unit_config(&pcnt_config);
-    pcnt_set_filter_value(PCNT_UNIT_0, 100);
+    pcnt_set_filter_value(PCNT_UNIT_0, 1000);
     pcnt_filter_enable(PCNT_UNIT_0);
 
     pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
-    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
-    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
+    
+    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, PCNT_THRESH1_VAL);
+    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, PCNT_THRESH0_VAL);
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1); 
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0); 
+    //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
+    //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
 
     /* Initialize PCNT's counter */
     pcnt_counter_pause(PCNT_UNIT_0);
@@ -111,7 +117,7 @@ void event_handler()
 
     /* Initialize PCNT event queue and PCNT functions */
        pcnt_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
-       quadrature_encoder_counter_init(QUAD_ENC_MODE_2);
+       encoder_counter_init(QUAD_ENC_MODE_1);
 
        int16_t count = 0;
        pcnt_evt_t evt;
@@ -124,7 +130,13 @@ void event_handler()
            if (res == pdTRUE) {
                pcnt_get_counter_value(PCNT_UNIT_0, &count);
                MSG("Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
-               if (evt.status & PCNT_STATUS_L_LIM_M) {
+               if (evt.status & PCNT_STATUS_THRES1_M) {
+                  MSG("THRES1 EVT\n");
+               }
+               if (evt.status & PCNT_STATUS_THRES0_M) {
+                  MSG("THRES0 EVT\n");
+               }
+	       if (evt.status & PCNT_STATUS_L_LIM_M) {
                    MSG("L_LIM EVT\n");
                }
                if (evt.status & PCNT_STATUS_H_LIM_M) {

@@ -12,9 +12,10 @@
 #define PCNT_PULSE_GPIO            12      // gpio for PCNT
 #define PCNT_CONTROL_GPIO         14
 
-#define PCNT_H_LIM_VAL      24 //maximal volume
-#define PCNT_L_LIM_VAL     -1 //minimal volume (zero as mute is an extra event)
-
+//#define PCNT_H_LIM_VAL      23 //maximal volume (0 - 23) zero represents vol step 1
+//#define PCNT_L_LIM_VAL     -1 //mute is an extra event
+#define PCNT_THRESH0_VAL	-1 //mute volume (ZERO Event is vol step 1)
+#define PCNT_THRESH1_VAL	23 //max volume 
 typedef enum {
     QUAD_ENC_MODE_1 = 1,
    QUAD_ENC_MODE_2 = 2,
