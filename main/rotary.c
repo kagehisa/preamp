@@ -1,4 +1,4 @@
-/*  Relais control driver
+/*  Rotary control driver
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -6,187 +6,137 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include "driver/gpio.h"
+
+
 #include "msg_stuff.h"
+
+#include "esp_types.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/queue.h"
+#include "driver/periph_ctrl.h"
+#include "driver/gpio.h"
+//#include <esp_log.h>
+#include "driver/pcnt.h"
+
+#include "rotary.h"
 
 
-#define IN_A CONFIG_PIN_A
-#define IN_B CONFIG_PIN_B
+xQueueHandle pcnt_evt_queue;   // A queue to handle pulse counter events
 
-
-
-
-
-
-
-
-
-
-
-/* handle for the nvm access  */
-nvs_handle relais_handle;
-
-/* key string for the nvm values  */
-const char* rel_key = "relais_state";
-
-
-/* Module helper functions  */
-
-static uint8_t init_relais_state( void )
+static void IRAM_ATTR quad_enc_isr(void *arg)
 {
-   uint8_t ret = 0;
+    uint32_t intr_status = PCNT.int_st.val;
+    uint8_t i;
+    pcnt_evt_t evt;
+    portBASE_TYPE HPTaskAwoken = pdFALSE;
 
-   ret = init_nv();
-   if(ret)
-   {
-    ret = open_nv(&relais_handle);
-
-    if(ret)
-    { 
-	ret = read_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-        if(!ret) //assuming the entry does noty exist yet
+    for (i = 0; i < PCNT_UNIT_MAX; i++) 
+    {
+        if (intr_status & (BIT(i))) 
         {
-          ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
+            evt.unit = i;
+            /* Save the PCNT event type that caused an interrupt
+               to pass it to the main program */
+            evt.status = PCNT.status_unit[i].val;
+            PCNT.int_clr.val = BIT(i);
+            xQueueSendFromISR(pcnt_evt_queue, &evt, &HPTaskAwoken);
+            if (HPTaskAwoken == pdTRUE) 
+            {
+                portYIELD_FROM_ISR();
+            }
         }
     }
-   }
+}
 
-   return ret;
+static void enc_gpio_init() 
+{
+//   gpio_pad_select_gpio(DIRECTION);
+//   gpio_set_direction(DIRECTION,GPIO_MODE_INPUT);
+//   gpio_set_pull_mode(DIRECTION, GPIO_PULLDOWN_ONLY);
 }
 
 
-static uint8_t get_gpio_by_index(uint8_t index)
+void encoder_counter_init(quad_encoder_mode enc_mode) 
 {
-     uint8_t ret;
-     ret = (index < RELAIS_NUM) ? (&relais)->relais[index] : REL_ERR;
-
-     return ret;	
-}
-
-
-static uint8_t get_state_by_index(uint8_t index)
-{
-     uint8_t ret;
-     ret = (index < RELAIS_NUM) ? (&relais)->state[index] : REL_ERR;
-
-     return ret;	
-}
-
-static uint8_t active_relais_count( void )
-{
- uint8_t i, count = 0;
-
- for( i=0; i<RELAIS_NUM; i++)
- {
-   count += ((&relais)->state[i] == STATE_ON) ? 1 : 0;
- }
-
- return count;
-}
-
-/* Public functions  */
-
-uint8_t init_relais( void )
-{
-/* Initialises the relays with the last state stored in nvram or
- * if no nv value is available with a clear all off state 
- * */
-
-   uint8_t ret, active=0;
-
-   ret = init_relais_state();
-   MSG("debug msg init func; ret = %i \n", ret);
-   if(ret)
-   {
-     active = get_active_relais();
-	MSG("active = %i \n", active);     
-     if(active != 0)
-     {
-	MSG("switching on %i \n", active);     
-      switch_relais_on(active);
-     }else{
-      switch_relais_off(OUTPUT_OFF);
-	MSG("switching off %i \n", active);     
-     }
-   }
- return ret;
-}
-
-uint8_t switch_relais_on(uint8_t relais_num)
-{
-
-/* Sets the GPIO that controls the apropriate relais high.
- * Returns the level that has been set.
- * relais_num is a number from 1 to NUM_RELAIS 
- * */
-  if(active_relais_count() == 0 || relais_num == get_active_relais())
-  {
-     uint8_t gpio_num, ret;
-
-     gpio_num = get_gpio_by_index(relais_num-1);
-   
-     gpio_pad_select_gpio(gpio_num);
-     gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
-     gpio_set_level(gpio_num, 1);
-
-     (&relais)->state[relais_num-1] = STATE_ON;
-
-     ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-
-    return ( (ret) ? get_state_by_index(relais_num-1) : REL_ERR );
- 
-  }
-
-  return REL_ERR; // more than on active relais and desired active relais != current active one....
-
-}
-
-
-uint8_t switch_relais_off(uint8_t relais_num)
-{
-
-/* Sets the GPIO that controls the apropriate relais high.
- * Returns the level that has been set.
- * relais_num is a number between 1 and NUM_RELAIS or OUTPUT_OFF
- * */
-
-    uint8_t gpio_num, ret;
-    
-    gpio_num = (relais_num != OUTPUT_OFF) ? get_gpio_by_index(relais_num-1) : get_active_relais();
-
-    //todo: if rel num = 0 skip the last part
-    if(gpio_num != 0)
+    enc_gpio_init();
+    pcnt_config_t pcnt_config = 
     {
-       gpio_pad_select_gpio(gpio_num);
-       gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
-       gpio_set_level(gpio_num, 0);
+              .pulse_gpio_num = PCNT_PULSE_GPIO,
+              .ctrl_gpio_num = PCNT_CONTROL_GPIO,
+              .channel = PCNT_CHANNEL_0,
+              .unit = PCNT_UNIT_0,
+              .pos_mode = PCNT_COUNT_INC,            // Count up on the positive edge
+              .neg_mode = PCNT_COUNT_DIS,            // Keep the counter value on the negative edge
+              .lctrl_mode = PCNT_MODE_KEEP,          // Reverse counting direction if low
+              .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
+              .counter_h_lim = PCNT_H_LIM_VAL,
+              .counter_l_lim = PCNT_L_LIM_VAL,
+    };
 
-       (&relais)->state[relais_num-1] = STATE_OFF;
-    
-       ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-       return ( (ret) ? get_state_by_index(relais_num-1) : REL_ERR );
-     
-    }
- return REL_ERR;
-}
-
-uint8_t get_active_relais(void)
-{
-/* This function returns the number of the current active relais.
- * Returns 0 if none is active
- * */
-
-   uint8_t i;
-
-   for(i=0; i<RELAIS_NUM; i++)
+   switch (enc_mode) 
    {
-    if(get_state_by_index(i) == STATE_ON)
-    {
-      return i+1;
-    }
+    case QUAD_ENC_MODE_1:
+       break;
+    case QUAD_ENC_MODE_2:
+       pcnt_config.neg_mode = PCNT_COUNT_DEC;
+       break;
+    case QUAD_ENC_MODE_4:
+      // Doesn't appear to be possible to handle 4X mode with the PCNT. THis mode requires the count to increment when the CONTROL input changes.
+      break;
    }
-  return 0;
+
+    pcnt_unit_config(&pcnt_config);
+    pcnt_set_filter_value(PCNT_UNIT_0, 100);
+    pcnt_filter_enable(PCNT_UNIT_0);
+
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
+
+    /* Initialize PCNT's counter */
+    pcnt_counter_pause(PCNT_UNIT_0);
+    pcnt_counter_clear(PCNT_UNIT_0);
+
+    /* Register ISR handler and enable interrupts for PCNT unit */
+    pcnt_isr_register(quad_enc_isr, NULL, 0, NULL);
+    pcnt_intr_enable(PCNT_UNIT_0);
+
+    /* Everything is set up, now go to counting */
+    pcnt_counter_resume(PCNT_UNIT_0);
 }
 
+void event_handler()
+{
+
+    /* Initialize PCNT event queue and PCNT functions */
+       pcnt_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
+       quadrature_encoder_counter_init(QUAD_ENC_MODE_2);
+
+       int16_t count = 0;
+       pcnt_evt_t evt;
+       portBASE_TYPE res;
+       while (1) {
+           /* Wait for the event information passed from PCNT's interrupt handler.
+            * Once received, decode the event type and print it on the serial monitor.
+            */
+           res = xQueueReceive(pcnt_evt_queue, &evt, 1000 / portTICK_PERIOD_MS);
+           if (res == pdTRUE) {
+               pcnt_get_counter_value(PCNT_UNIT_0, &count);
+               MSG("Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
+               if (evt.status & PCNT_STATUS_L_LIM_M) {
+                   MSG("L_LIM EVT\n");
+               }
+               if (evt.status & PCNT_STATUS_H_LIM_M) {
+                   MSG("H_LIM EVT\n");
+               }
+               if (evt.status & PCNT_STATUS_ZERO_M) {
+                   MSG("ZERO EVT\n");
+               }
+           } else {
+               pcnt_get_counter_value(PCNT_UNIT_0, &count);
+               MSG("Current counter value :%d\n", count);
+           }
+       }
+}
 

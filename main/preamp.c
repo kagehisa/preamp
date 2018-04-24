@@ -11,6 +11,7 @@
 #include "freertos/task.h"
 #include "msg_stuff.h"
 #include "relais.h"
+#include "rotary.h"
 
 void switch_task(void *pvParameter)
 {
@@ -43,7 +44,13 @@ void switch_task(void *pvParameter)
     }
 }
 
-void app_main()
+void rotary_task(void *pvParameter)
 {
-    xTaskCreate(&switch_task, "relais_switch_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+ event_handler();
+}
+
+void app_main()
+{   
+    //xTaskCreate(&switch_task, "relais_switch_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    xTaskCreate(&rotary_task, "rotary_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
 }
