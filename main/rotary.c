@@ -22,7 +22,7 @@
 #include "rotary.h"
 
 
-xQueueHandle pcnt_evt_queue;   // A queue to handle pulse counter events
+xQueueHandle pcnt_0_evt_queue;   // A queue to handle pulse counter events
 
 static void IRAM_ATTR quad_enc_isr(void *arg)
 {
@@ -40,7 +40,7 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
                to pass it to the main program */
             evt.status = PCNT.status_unit[i].val;
             PCNT.int_clr.val = BIT(i);
-            xQueueSendFromISR(pcnt_evt_queue, &evt, &HPTaskAwoken);
+            xQueueSendFromISR(pcnt_0_evt_queue, &evt, &HPTaskAwoken);
             if (HPTaskAwoken == pdTRUE) 
             {
                 portYIELD_FROM_ISR();
@@ -49,7 +49,7 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
     //}
 }
 
-static void enc_gpio_init() 
+static void enc_0_gpio_init() 
 {
 //   gpio_pad_select_gpio(DIRECTION);
 //   gpio_set_direction(DIRECTION,GPIO_MODE_INPUT);
@@ -57,21 +57,19 @@ static void enc_gpio_init()
 }
 
 
-void encoder_counter_init(quad_encoder_mode enc_mode) 
+void encoder_0_counter_init(quad_encoder_mode enc_mode) 
 {
-    enc_gpio_init();
+    enc_0_gpio_init();
     pcnt_config_t pcnt_config = 
     {
-              .pulse_gpio_num = PCNT_PULSE_GPIO,
-              .ctrl_gpio_num = PCNT_CONTROL_GPIO,
+              .pulse_gpio_num = PCNT0_PULSE_GPIO,
+              .ctrl_gpio_num = PCNT0_CONTROL_GPIO,
               .channel = PCNT_CHANNEL_0,
               .unit = PCNT_UNIT_0,
               .pos_mode = PCNT_COUNT_INC,            // Count up on the positive edge
               .neg_mode = PCNT_COUNT_DIS,            // Keep the counter value on the negative edge
               .lctrl_mode = PCNT_MODE_KEEP,          // Reverse counting direction if low
               .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
-             // .counter_h_lim = PCNT_H_LIM_VAL,
-             // .counter_l_lim = PCNT_L_LIM_VAL,
     };
 
    switch (enc_mode) 
@@ -81,24 +79,16 @@ void encoder_counter_init(quad_encoder_mode enc_mode)
     case QUAD_ENC_MODE_2:
        pcnt_config.neg_mode = PCNT_COUNT_DEC;
        break;
-    case QUAD_ENC_MODE_4:
-      // Doesn't appear to be possible to handle 4X mode with the PCNT. 
-      // This mode requires the count to increment when the CONTROL input changes.
-      break;
    }
 
     pcnt_unit_config(&pcnt_config);
     pcnt_set_filter_value(PCNT_UNIT_0, 1000);
     pcnt_filter_enable(PCNT_UNIT_0);
 
-    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
-    
-    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, PCNT_THRESH1_VAL);
-    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, PCNT_THRESH0_VAL);
+    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, PCNT0_THRESH1_VAL);
+    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, PCNT0_THRESH0_VAL);
     pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1); 
     pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0); 
-    //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
-    //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
 
     /* Initialize PCNT's counter */
     pcnt_counter_pause(PCNT_UNIT_0);
@@ -112,42 +102,86 @@ void encoder_counter_init(quad_encoder_mode enc_mode)
     pcnt_counter_resume(PCNT_UNIT_0);
 }
 
+
+static void reset_unit(int16_t *counter)
+{
+  pcnt_counter_pause(PCNT_UNIT_0);
+  pcnt_counter_clear(PCNT_UNIT_0);
+
+  *counter = 0;
+
+  pcnt_counter_resume(PCNT_UNIT_0);
+}
+
 void event_handler()
 {
 
     /* Initialize PCNT event queue and PCNT functions */
-       pcnt_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
-       encoder_counter_init(QUAD_ENC_MODE_1);
+       pcnt_0_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
+       encoder_0_counter_init(QUAD_ENC_MODE_1);
 
-       int16_t count = 0;
+       int16_t count = PCNT0_THRESH0_VAL;
+       int16_t rep_count = PCNT0_THRESH0_VAL;
+       int16_t old_count = count;
+       uint8_t mult = 1;
+
        pcnt_evt_t evt;
        portBASE_TYPE res;
+
+        volatile uint8_t min_event=0, max_event=0;
+
        while (1) {
            /* Wait for the event information passed from PCNT's interrupt handler.
             * Once received, decode the event type and print it on the serial monitor.
             */
-           res = xQueueReceive(pcnt_evt_queue, &evt, 1000 / portTICK_PERIOD_MS);
+           res = xQueueReceive(pcnt_0_evt_queue, &evt, 1000 / portTICK_PERIOD_MS);
+
+	   old_count=count;
+           pcnt_get_counter_value(PCNT_UNIT_0, &count);
+
            if (res == pdTRUE) {
-               pcnt_get_counter_value(PCNT_UNIT_0, &count);
                MSG("Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
                if (evt.status & PCNT_STATUS_THRES1_M) {
-                  MSG("THRES1 EVT\n");
+		  if(!min_event && (old_count < count))
+	          {
+                    MSG("THRES1 EVT\n");
+		    max_event^=1;
+		    reset_unit(&count);
+
+		  }
                }
                if (evt.status & PCNT_STATUS_THRES0_M) {
-                  MSG("THRES0 EVT\n");
-               }
-	       if (evt.status & PCNT_STATUS_L_LIM_M) {
-                   MSG("L_LIM EVT\n");
-               }
-               if (evt.status & PCNT_STATUS_H_LIM_M) {
-                   MSG("H_LIM EVT\n");
+		  if(!max_event && (old_count > count))
+		  {
+                    MSG("THRES0 EVT\n");
+		    min_event^=1;
+		  }
                }
                if (evt.status & PCNT_STATUS_ZERO_M) {
                    MSG("ZERO EVT\n");
                }
            } else {
-               pcnt_get_counter_value(PCNT_UNIT_0, &count);
-               MSG("Current counter value :%d\n", count);
+	       if( max_event )
+	       { 
+		 //mult = count/PCNT0_THRESH1_VAL;
+		 if(old_count <= count)//still counting up after max value reached
+		 {
+                   rep_count = PCNT0_THRESH1_VAL;
+	         }else{
+		   rep_count = count;
+		   max_event^=1;
+		 }
+	         //rep_count = (old_count < count) ? PCNT0_THRESH1_VAL : rep_count  ;
+	       }else{
+                 rep_count = count;
+	       }
+
+	       //f( min_event)
+
+	       //count= (min_event) ? PCNT0_THRESH0_VAL : count;
+               MSG("Current counter value :%d", count);
+               MSG("  | Reportet counter value :%d\n", rep_count);
+	       
            }
        }
 }
