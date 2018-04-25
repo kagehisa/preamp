@@ -21,6 +21,21 @@
 
 #include "rotary.h"
 
+    pcnt_config_t pcnt_0_config =
+    {
+              .pulse_gpio_num = PCNT0_PULSE_GPIO,
+              .ctrl_gpio_num = PCNT0_CONTROL_GPIO,
+              .channel = PCNT_CHANNEL_0,
+              .unit = PCNT_UNIT_0,
+              .pos_mode = PCNT_COUNT_INC,            // Count up on the positive edge
+              .neg_mode = PCNT_COUNT_DIS,            // Keep the counter value on the negative edge
+              .lctrl_mode = PCNT_MODE_KEEP,          // Reverse counting direction if low
+              .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
+              .counter_h_lim = PCNT0_THRESH1_VAL,
+	      .counter_l_lim = PCNT0_THRESH0_VAL,
+    
+    };
+
 
 xQueueHandle pcnt_0_evt_queue;   // A queue to handle pulse counter events
 
@@ -60,35 +75,27 @@ static void enc_0_gpio_init()
 void encoder_0_counter_init(quad_encoder_mode enc_mode) 
 {
     enc_0_gpio_init();
-    pcnt_config_t pcnt_config = 
-    {
-              .pulse_gpio_num = PCNT0_PULSE_GPIO,
-              .ctrl_gpio_num = PCNT0_CONTROL_GPIO,
-              .channel = PCNT_CHANNEL_0,
-              .unit = PCNT_UNIT_0,
-              .pos_mode = PCNT_COUNT_INC,            // Count up on the positive edge
-              .neg_mode = PCNT_COUNT_DIS,            // Keep the counter value on the negative edge
-              .lctrl_mode = PCNT_MODE_KEEP,          // Reverse counting direction if low
-              .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
-    };
 
    switch (enc_mode) 
    {
     case QUAD_ENC_MODE_1:
        break;
     case QUAD_ENC_MODE_2:
-       pcnt_config.neg_mode = PCNT_COUNT_DEC;
+       pcnt_0_config.neg_mode = PCNT_COUNT_DEC;
        break;
    }
 
-    pcnt_unit_config(&pcnt_config);
+    pcnt_unit_config(&pcnt_0_config);
     pcnt_set_filter_value(PCNT_UNIT_0, 1000);
     pcnt_filter_enable(PCNT_UNIT_0);
 
-    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, PCNT0_THRESH1_VAL);
-    pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, PCNT0_THRESH0_VAL);
-    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1); 
-    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0); 
+    //pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, PCNT0_THRESH1_VAL);
+    //pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, PCNT0_THRESH0_VAL);
+    //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1); 
+    //PCNT_UNIT_0pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0); 
+
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
+    pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
 
     /* Initialize PCNT's counter */
     pcnt_counter_pause(PCNT_UNIT_0);
@@ -102,16 +109,6 @@ void encoder_0_counter_init(quad_encoder_mode enc_mode)
     pcnt_counter_resume(PCNT_UNIT_0);
 }
 
-
-static void reset_unit(int16_t *counter)
-{
-  pcnt_counter_pause(PCNT_UNIT_0);
-  pcnt_counter_clear(PCNT_UNIT_0);
-
-  *counter = 0;
-
-  pcnt_counter_resume(PCNT_UNIT_0);
-}
 
 void event_handler()
 {
@@ -141,21 +138,13 @@ void event_handler()
 
            if (res == pdTRUE) {
                MSG("Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
-               if (evt.status & PCNT_STATUS_THRES1_M) {
-		  if(!min_event && (old_count < count))
-	          {
-                    MSG("THRES1 EVT\n");
+               if (evt.status & PCNT_STATUS_H_LIM_M) {
+                    MSG("HLIM EVT\n");
 		    max_event^=1;
-		    reset_unit(&count);
-
-		  }
                }
-               if (evt.status & PCNT_STATUS_THRES0_M) {
-		  if(!max_event && (old_count > count))
-		  {
-                    MSG("THRES0 EVT\n");
+               if (evt.status & PCNT_STATUS_L_LIM_M) {
+                    MSG("LLIM EVT\n");
 		    min_event^=1;
-		  }
                }
                if (evt.status & PCNT_STATUS_ZERO_M) {
                    MSG("ZERO EVT\n");
@@ -163,15 +152,18 @@ void event_handler()
            } else {
 	       if( max_event )
 	       { 
-		 //mult = count/PCNT0_THRESH1_VAL;
 		 if(old_count <= count)//still counting up after max value reached
 		 {
                    rep_count = PCNT0_THRESH1_VAL;
-	         }else{
+
+	         }else{ // we are counting down but now count >= 0 and repcount = max_val
+
+		   //the magic happens here... 
+		   //
 		   rep_count = count;
+		   //erst setzen wenn count und repcount gleich sind
 		   max_event^=1;
 		 }
-	         //rep_count = (old_count < count) ? PCNT0_THRESH1_VAL : rep_count  ;
 	       }else{
                  rep_count = count;
 	       }
