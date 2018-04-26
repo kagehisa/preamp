@@ -46,7 +46,7 @@ void switch_task(void *pvParameter)
 
 void rotary_task(void *pvParameter)
 {
- event_handler();
+ rotary_event_handler();
 }
 
 void app_main()

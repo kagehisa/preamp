@@ -10,15 +10,16 @@
 #define ROTARY_H
 
 #define PCNT0_PULSE_GPIO            12      // gpio for PCNT0
-#define PCNT1_PULSE_GPIO                  // gpio for PCNT1
+#define PCNT1_PULSE_GPIO            27      // gpio for PCNT1
+
 #define PCNT0_CONTROL_GPIO         14
-#define PCNT1_CONTROL_GPIO         
+#define PCNT1_CONTROL_GPIO         26
 
-#define PCNT0_THRESH0_VAL	0  //min volume
-#define PCNT0_THRESH1_VAL	23 //max volume 
+#define REP_0_MAX		24
+#define REP_0_MIN		1
 
-#define PCNT1_THRESH0_VAL	1  //min volume
-#define PCNT1_THRESH1_VAL	5 //max volume 
+#define REP_1_MAX		5
+#define REP_1_MIN		1
 
 
 typedef enum {
@@ -26,21 +27,11 @@ typedef enum {
    QUAD_ENC_MODE_2 = 2,
 } quad_encoder_mode;
 
-/* A sample structure to pass events from the PCNT
- * interrupt handler to the main program.
- */
-typedef struct {
-    uint8_t unit;  // the PCNT unit that originated an interrupt
-    uint32_t status; // information on the event type that caused the interrupt
-} pcnt_evt_t;
 
 //initalises the PCNT with the values needed for handling the rotary encoder
-void encoder_0_counter_init(quad_encoder_mode enc_mode); 
+void encoder_init(quad_encoder_mode enc_mode); 
 
-//initalises the PCNT with the values needed for handling the rotary encoder
-//void encoder_1_counter_init(quad_encoder_mode enc_mode); 
-
-void event_handler( void );
+void rotary_event_handler( void );
 
 
 #endif /* ROTARY_H */
