@@ -210,14 +210,17 @@ static int16_t handle_pcnt(uint8_t max, uint8_t min, int16_t old_count, int16_t 
 return rep_count;
 
 }
-
-
+// TODO:
+// auf 2 handler functionen umbauen.
+// Jede Unit braucht einen Handler und eine queue
+//
+//
 //one handler to rule them all...
 void rotary_event_handler( void )
 {
 
     /* Initialize PCNT event queue and PCNT functions */
-       pcnt_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
+       pcnt_evt_queue = xQueueCreate(20, sizeof(pcnt_evt_t));
        
        encoder_init(QUAD_ENC_MODE_1);
 
@@ -233,7 +236,7 @@ void rotary_event_handler( void )
            /* Wait for the event information passed from PCNT's interrupt handler.
             * Once received, decode the event type and print it on the serial monitor.
             */
-           res = xQueueReceive(pcnt_evt_queue, &evt, 1000 / portTICK_PERIOD_MS);
+           res = xQueueReceive(pcnt_evt_queue, &evt, 100 / portTICK_PERIOD_MS);
 
 	   old_count[evt.unit]=count[evt.unit];
            pcnt_get_counter_value(evt.unit, count+(evt.unit));
