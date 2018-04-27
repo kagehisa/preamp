@@ -22,16 +22,24 @@
 #define REP_1_MIN		1
 
 
+//define the reposrt function to report to the event_handler
+#define REPORT_FUNC_ROTARY_0( unit, count ) MSG( unit, count )
+#define REPORT_FUNC_ROTARY_1( unit, count ) MSG( unit, count )
+
+
+
 typedef enum {
-    QUAD_ENC_MODE_1 = 1,
+   QUAD_ENC_MODE_1 = 1,
    QUAD_ENC_MODE_2 = 2,
 } quad_encoder_mode;
 
 
 //initalises the PCNT with the values needed for handling the rotary encoder
-void encoder_init(quad_encoder_mode enc_mode); 
+void encoder_0_counter_init(quad_encoder_mode enc_mode); 
+void encoder_1_counter_init(quad_encoder_mode enc_mode); 
 
-void rotary_event_handler( void );
+void rotary_0_event_handler( void );
+void rotary_1_event_handler( void );
 
 
 #endif /* ROTARY_H */

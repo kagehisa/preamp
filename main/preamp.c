@@ -44,13 +44,19 @@ void switch_task(void *pvParameter)
     }
 }
 
-void rotary_task(void *pvParameter)
+void rotary_task_0(void *pvParameter)
 {
- rotary_event_handler();
+ rotary_0_event_handler();
+}
+
+void rotary_task_1(void *pvParameter)
+{
+ rotary_1_event_handler();
 }
 
 void app_main()
 {   
     //xTaskCreate(&switch_task, "relais_switch_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
-    xTaskCreate(&rotary_task, "rotary_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    xTaskCreate(&rotary_task_0, "rotary_task0", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    xTaskCreate(&rotary_task_1, "rotary_task1", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
 }

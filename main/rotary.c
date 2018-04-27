@@ -1,4 +1,5 @@
 /*  Rotary control driver
+ *  <F5>
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -53,7 +54,6 @@ pcnt_config_t pcnt_0_config =
     
 };
 
-xQueueHandle pcnt_evt_queue;   // A queue to handle pulse counter events
 
 
 pcnt_config_t pcnt_1_config =
@@ -70,6 +70,9 @@ pcnt_config_t pcnt_1_config =
     .counter_l_lim = PCNT1_THRESH0_VAL,
     
 };
+
+xQueueHandle pcnt_evt_queues[USED_UNITS];// A queue to handle pulse counter events
+
 
 
 static void IRAM_ATTR quad_enc_isr(void *arg)
@@ -88,7 +91,7 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
                to pass it to the main program */
             evt.status = PCNT.status_unit[i].val;
             PCNT.int_clr.val = BIT(i);
-            xQueueSendFromISR(pcnt_evt_queue, &evt, &HPTaskAwoken);
+            xQueueSendFromISR(pcnt_evt_queues[i], &evt, &HPTaskAwoken);
             if (HPTaskAwoken == pdTRUE) 
             {
                 portYIELD_FROM_ISR();
@@ -105,7 +108,7 @@ static void enc_0_gpio_init()
 }
 
 
-static void encoder_0_counter_init(quad_encoder_mode enc_mode) 
+void encoder_0_counter_init(quad_encoder_mode enc_mode) 
 {
     enc_0_gpio_init();
 
@@ -138,7 +141,7 @@ static void encoder_0_counter_init(quad_encoder_mode enc_mode)
 }
 
 
-static void enc_1_gpio_init() 
+void enc_1_gpio_init() 
 {
 //   gpio_pad_select_gpio(DIRECTION);
 //   gpio_set_direction(DIRECTION,GPIO_MODE_INPUT);
@@ -146,22 +149,22 @@ static void enc_1_gpio_init()
 }
 
 
-static void encoder_1_counter_init(quad_encoder_mode enc_mode) 
+void encoder_1_counter_init(quad_encoder_mode enc_mode) 
 {
-    enc_0_gpio_init();
+    enc_1_gpio_init();
 
    switch (enc_mode) 
    {
     case QUAD_ENC_MODE_1:
        break;
     case QUAD_ENC_MODE_2:
-       pcnt_0_config.neg_mode = PCNT_COUNT_DEC;
+       pcnt_1_config.neg_mode = PCNT_COUNT_DEC;
        break;
    }
 
     pcnt_unit_config(&pcnt_1_config);
-    pcnt_set_filter_value(PCNT_UNIT_0, 1000);
-    pcnt_filter_enable(PCNT_UNIT_0);
+    pcnt_set_filter_value(PCNT_UNIT_1, 1000);
+    pcnt_filter_enable(PCNT_UNIT_1);
 
     pcnt_event_enable(PCNT_UNIT_1, PCNT_EVT_H_LIM);
     pcnt_event_enable(PCNT_UNIT_1, PCNT_EVT_L_LIM);
@@ -179,14 +182,6 @@ static void encoder_1_counter_init(quad_encoder_mode enc_mode)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-
-// Function to init the used counters
-
-void encoder_init(quad_encoder_mode enc_mode)
-{
-	encoder_0_counter_init(enc_mode); 
-	encoder_1_counter_init(enc_mode); 
-}
 
 
 // return a cleaned counter value according to the given max and min values
@@ -210,23 +205,19 @@ static int16_t handle_pcnt(uint8_t max, uint8_t min, int16_t old_count, int16_t 
 return rep_count;
 
 }
-// TODO:
-// auf 2 handler functionen umbauen.
-// Jede Unit braucht einen Handler und eine queue
-//
-//
-//one handler to rule them all...
-void rotary_event_handler( void )
+
+
+void rotary_0_event_handler( void )
 {
 
-    /* Initialize PCNT event queue and PCNT functions */
-       pcnt_evt_queue = xQueueCreate(20, sizeof(pcnt_evt_t));
+       /* Initialize PCNT event queue and PCNT functions */
+       pcnt_evt_queues[0]  = xQueueCreate(10, sizeof(pcnt_evt_t));
        
-       encoder_init(QUAD_ENC_MODE_1);
+       encoder_0_counter_init(QUAD_ENC_MODE_1);
 
-       int16_t count[USED_UNITS] = {0, 0};
-       int16_t old_count[USED_UNITS] = {0, 0};
-       uint8_t rep_count[USED_UNITS]= {0, 0};
+       int16_t count = 0;
+       int16_t old_count  = 0;
+       uint8_t rep_count = 0;
 
        pcnt_evt_t evt;
        portBASE_TYPE res;
@@ -236,23 +227,49 @@ void rotary_event_handler( void )
            /* Wait for the event information passed from PCNT's interrupt handler.
             * Once received, decode the event type and print it on the serial monitor.
             */
-           res = xQueueReceive(pcnt_evt_queue, &evt, 100 / portTICK_PERIOD_MS);
+           res = xQueueReceive(pcnt_evt_queues[0], &evt, 1000 / portTICK_PERIOD_MS);
 
-	   old_count[evt.unit]=count[evt.unit];
-           pcnt_get_counter_value(evt.unit, count+(evt.unit));
+	   old_count=count;
+           pcnt_get_counter_value(evt.unit, &count);
 
            if (res != pdTRUE) 
 	   {
-               switch(evt.unit)
-	       {
-  		case 0:  rep_count[0] =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count[0], count[0], rep_count[0]);
-               		 MSG("| Reportet counter 0 :%2d |\n", rep_count[0]);
-			 break;
-		case 1:  rep_count[1] =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count[1], count[1], rep_count[1]); 
-                         MSG("| Reportet counter 1 :%2d |\n", rep_count[1]);
-			 break;	
-		default: break;
-	       }
+  	     rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
+             REPORT_FUNC_ROTARY_0("| Reportet counter 0 :%2d |\n", rep_count);
+	   }
+       }
+}
+
+
+void rotary_1_event_handler( void )
+{
+
+    /* Initialize PCNT event queue and PCNT functions */
+       pcnt_evt_queues[1] = xQueueCreate(10, sizeof(pcnt_evt_t));
+       
+       encoder_1_counter_init(QUAD_ENC_MODE_1);
+
+       int16_t count = 0;
+       int16_t old_count = 0;
+       uint8_t rep_count = 0;
+
+       pcnt_evt_t evt;
+       portBASE_TYPE res;
+
+       while (1) 
+       {
+           /* Wait for the event information passed from PCNT's interrupt handler.
+            * Once received, decode the event type and print it on the serial monitor.
+            */
+           res = xQueueReceive(pcnt_evt_queues[1], &evt, 1000 / portTICK_PERIOD_MS);
+
+	   old_count=count;
+           pcnt_get_counter_value(evt.unit, &count);
+
+           if (res != pdTRUE) 
+	   {
+		rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count); 
+                REPORT_FUNC_ROTARY_1("| Reportet counter 1 :%2d |\n", rep_count);
            }
        }
 }
