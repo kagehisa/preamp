@@ -46,12 +46,22 @@ void switch_task(void *pvParameter)
 
 void rotary_task_0(void *pvParameter)
 {
- rotary_0_event_handler();
+encoder_0_counter_init(1);
+ while(1)
+ {
+  MSG("counter 0 value %d\n", rotary_0_counter_val());
+  MSG("counter gpio value %d\n", rotary_0_gpio_val());
+ }
 }
 
 void rotary_task_1(void *pvParameter)
 {
- rotary_1_event_handler();
+encoder_1_counter_init(1);
+ while(1)
+ {
+  MSG("counter 1 value %d\n", rotary_1_counter_val());
+  MSG("counter gpio value %d\n", rotary_1_gpio_val());
+ }
 }
 
 void app_main()

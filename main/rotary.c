@@ -10,7 +10,6 @@
 
 
 #include "msg_stuff.h"
-
 #include "esp_types.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,7 +17,6 @@
 #include "driver/periph_ctrl.h"
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
-
 #include "rotary.h"
 
 #define USED_UNITS 	2
@@ -27,16 +25,13 @@
 #define PCNT0_THRESH1_VAL       100  //overrun val
 
 #define PCNT1_THRESH0_VAL       -10  //neg overrun val
-#define PCNT1_THRESH1_VAL       10 //overrun val 
+#define PCNT1_THRESH1_VAL       10 //overrun val
 
-/* A sample structure to pass events from the PCNT
-** interrupt handler to the main program.
-**/
-typedef struct {
-	uint8_t unit;  // the PCNT unit that originated an interrupt;
-	uint32_t status; // information on the event type that caused the interrupt
-} pcnt_evt_t;
+#define ENC_0_PIN_SEL		(1 << ENC0_SW_GPIO)
+#define ENC_1_PIN_SEL		(1 << ENC1_SW_GPIO)
 
+#define GPIO_DELAY             (1000 / portTICK_PERIOD_MS)
+#define PCNT_DELAY             (1000 / portTICK_PERIOD_MS)
 
 /* PCNT0 configuration please look at the init as well*/
 pcnt_config_t pcnt_0_config =
@@ -54,7 +49,23 @@ pcnt_config_t pcnt_0_config =
     
 };
 
+gpio_config_t gpio_enc_0_config =
+{
+   .pin_bit_mask = ENC_0_PIN_SEL,
+   .mode         = GPIO_MODE_INPUT,
+   .pull_up_en   = GPIO_PULLUP_DISABLE,
+   .pull_down_en = GPIO_PULLDOWN_ENABLE,
+   .intr_type = GPIO_INTR_POSEDGE,
+};
 
+gpio_config_t gpio_enc_1_config =
+{
+   .pin_bit_mask = ENC_1_PIN_SEL,
+   .mode         = GPIO_MODE_INPUT,
+   .pull_up_en   = GPIO_PULLUP_DISABLE,
+   .pull_down_en = GPIO_PULLDOWN_ENABLE,
+   .intr_type = GPIO_INTR_POSEDGE,
+};
 
 pcnt_config_t pcnt_1_config =
 {
@@ -72,6 +83,7 @@ pcnt_config_t pcnt_1_config =
 };
 
 xQueueHandle pcnt_evt_queues[USED_UNITS];// A queue to handle pulse counter events
+xQueueHandle gpio_evt_queues[USED_UNITS];// A queue to handle pulse counter events
 
 
 
@@ -100,11 +112,23 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
     }
 }
 
-static void enc_0_gpio_init() 
+//get the level and enqueue it.
+static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
-//   gpio_pad_select_gpio(DIRECTION);
-//   gpio_set_direction(DIRECTION,GPIO_MODE_INPUT);
-//   gpio_set_pull_mode(DIRECTION, GPIO_PULLDOWN_ONLY);
+    gpio_event_t evt;	
+    uint8_t i =0;
+    evt.gpio_num = (uint8_t) arg;
+    i = (evt.gpio_num == ENC0_SW_GPIO) ? 0 : 1;
+    evt.status = gpio_get_level(gpio_num);
+    xQueueSendFromISR(gpio_evt_queues[i], &evt, NULL);
+}
+
+static void enc_0_gpio_init(void) 
+{
+  gpio_config(&gpio_enc_0_config);
+  gpio_install_isr_service(0);
+  gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler, (void*) ENC0_SW_GPIO);
+  gpio_evt_queues[0]  = xQueueCreate(10, sizeof(gpio_evt_t));
 }
 
 
@@ -138,14 +162,17 @@ void encoder_0_counter_init(quad_encoder_mode enc_mode)
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_UNIT_0);
+
+   pcnt_evt_queues[0]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 }
 
 
 void enc_1_gpio_init() 
 {
-//   gpio_pad_select_gpio(DIRECTION);
-//   gpio_set_direction(DIRECTION,GPIO_MODE_INPUT);
-//   gpio_set_pull_mode(DIRECTION, GPIO_PULLDOWN_ONLY);
+  gpio_config(&gpio_enc_1_config);
+  gpio_install_isr_service(0);
+  gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler, (void*) ENC1_SW_GPIO);
+  gpio_evt_queues[1]  = xQueueCreate(10, sizeof(gpio_evt_t));
 }
 
 
@@ -179,6 +206,8 @@ void encoder_1_counter_init(quad_encoder_mode enc_mode)
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_UNIT_1);
+   
+    pcnt_evt_queues[1]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -206,71 +235,94 @@ return rep_count;
 
 }
 
-
-void rotary_0_event_handler( void )
+//returns the value of the gpio pin that caused the interrupt
+//returns -1 in case of error or no new event
+//must be called from within a task
+int8_t rotary_0_gpio_val( void )
 {
+  int8_t ret = -1;
+  portBASE_TYPE res;
+  gpio_evt_t evt;
 
-       /* Initialize PCNT event queue and PCNT functions */
-       pcnt_evt_queues[0]  = xQueueCreate(10, sizeof(pcnt_evt_t));
-       
-       encoder_0_counter_init(QUAD_ENC_MODE_1);
+  res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY )
+  ret = (res) ? evt.status : -1;
 
-       int16_t count = 0;
-       int16_t old_count  = 0;
-       uint8_t rep_count = 0;
-
-       pcnt_evt_t evt;
-       portBASE_TYPE res;
-
-       while (1) 
-       {
-           /* Wait for the event information passed from PCNT's interrupt handler.
-            * Once received, decode the event type and print it on the serial monitor.
-            */
-           res = xQueueReceive(pcnt_evt_queues[0], &evt, 1000 / portTICK_PERIOD_MS);
-
-	   old_count=count;
-           pcnt_get_counter_value(evt.unit, &count);
-
-           if (res != pdTRUE) 
-	   {
-  	     rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
-             REPORT_FUNC_ROTARY_0("| Reportet counter 0 :%2d |\n", rep_count);
-	   }
-       }
+return ret;  
 }
 
-
-void rotary_1_event_handler( void )
+//returns the value of the gpio pin that caused the interrupt
+//returns -1 in case of error or no new event
+//must be called from within a task
+int8_t rotary_1_gpio_val( void )
 {
+  int8_t ret = -1;
+  portBASE_TYPE res;
+  gpio_evt_t evt;
 
-    /* Initialize PCNT event queue and PCNT functions */
-       pcnt_evt_queues[1] = xQueueCreate(10, sizeof(pcnt_evt_t));
-       
-       encoder_1_counter_init(QUAD_ENC_MODE_1);
+  res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY )
+  ret = (res) ? evt.status : -1;
 
-       int16_t count = 0;
-       int16_t old_count = 0;
-       uint8_t rep_count = 0;
-
-       pcnt_evt_t evt;
-       portBASE_TYPE res;
-
-       while (1) 
-       {
-           /* Wait for the event information passed from PCNT's interrupt handler.
-            * Once received, decode the event type and print it on the serial monitor.
-            */
-           res = xQueueReceive(pcnt_evt_queues[1], &evt, 1000 / portTICK_PERIOD_MS);
-
-	   old_count=count;
-           pcnt_get_counter_value(evt.unit, &count);
-
-           if (res != pdTRUE) 
-	   {
-		rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count); 
-                REPORT_FUNC_ROTARY_1("| Reportet counter 1 :%2d |\n", rep_count);
-           }
-       }
+return ret;  
 }
 
+//returns the sanitized counter value for the defined max, min boundaries
+//returns -1 in case of no evt received or error
+//must be called from within a task
+int8_t rotary_0_counter_val( void )
+{
+
+   static int16_t count = 0;
+   static int16_t old_count  = 0;
+   static uint8_t rep_count = 0;
+
+   static pcnt_evt_t evt;
+
+   portBASE_TYPE res;
+   int8_t ret = -1;
+   /* Wait for the event information passed from PCNT's interrupt handler.
+    * Once received, decode the event type and print it on the serial monitor.
+    */
+   res = xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY);
+
+   old_count=count;
+   pcnt_get_counter_value(evt.unit, &count);
+
+   if (res != pdTRUE) 
+   {
+     rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
+     MSG("| Reportet counter 0 :%2d |\n", rep_count);
+     return rep_count;
+   }
+  return res;
+}
+
+//returns the sanitized counter value for the defined max, min boundaries
+//returns -1 in case of no evt received or error
+//must be called from within a task
+int8_t rotary_1_counter_val( void )
+{
+
+   static int16_t count = 0;
+   int16_t old_count  = 0;
+   static uint8_t rep_count = 0;
+
+   static pcnt_evt_t evt;
+
+   portBASE_TYPE res;
+   int8_t ret = -1;
+   /* Wait for the event information passed from PCNT's interrupt handler.
+    * Once received, decode the event type and print it on the serial monitor.
+    */
+   res = xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY);
+
+   old_count=count;
+   pcnt_get_counter_value(evt.unit, &count);
+
+   if (res != pdTRUE) 
+   {
+     rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
+     MSG("| Reportet counter 1 :%2d |\n", rep_count);
+     return rep_count;
+   }
+ return ret;
+}
