@@ -49,8 +49,10 @@ void rotary_task_0(void *pvParameter)
 encoder_0_counter_init(1);
  while(1)
  {
-  MSG("counter 0 value %d\n", rotary_0_counter_val());
-  MSG("counter gpio value %d\n", rotary_0_gpio_val());
+  if(rotary_0_gpio_val() != -1)
+  {
+   MSG("counter 0 value %d\n", rotary_0_counter_val());
+  }
  }
 }
 
@@ -59,8 +61,10 @@ void rotary_task_1(void *pvParameter)
 encoder_1_counter_init(1);
  while(1)
  {
-  MSG("counter 1 value %d\n", rotary_1_counter_val());
-  MSG("counter gpio value %d\n", rotary_1_gpio_val());
+  if(rotary_1_gpio_val() != -1)
+  {	  
+   MSG("counter 1 value %d\n", rotary_1_counter_val());
+  }
  }
 }
 

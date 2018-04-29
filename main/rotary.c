@@ -27,8 +27,8 @@
 #define PCNT1_THRESH0_VAL       -10  //neg overrun val
 #define PCNT1_THRESH1_VAL       10 //overrun val
 
-#define ENC_0_PIN_SEL		(1 << ENC0_SW_GPIO)
-#define ENC_1_PIN_SEL		(1 << ENC1_SW_GPIO)
+#define ENC_0_PIN_SEL		(1ULL << ENC0_SW_GPIO)
+#define ENC_1_PIN_SEL		(1ULL << ENC1_SW_GPIO)
 
 #define GPIO_DELAY             (1000 / portTICK_PERIOD_MS)
 #define PCNT_DELAY             (1000 / portTICK_PERIOD_MS)
@@ -53,18 +53,18 @@ gpio_config_t gpio_enc_0_config =
 {
    .pin_bit_mask = ENC_0_PIN_SEL,
    .mode         = GPIO_MODE_INPUT,
-   .pull_up_en   = GPIO_PULLUP_DISABLE,
-   .pull_down_en = GPIO_PULLDOWN_ENABLE,
-   .intr_type = GPIO_INTR_POSEDGE,
+   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for a remotely attached sensor
+   .pull_down_en = GPIO_PULLDOWN_DISABLE,
+   .intr_type = GPIO_INTR_NEGEDGE,
 };
 
 gpio_config_t gpio_enc_1_config =
 {
    .pin_bit_mask = ENC_1_PIN_SEL,
    .mode         = GPIO_MODE_INPUT,
-   .pull_up_en   = GPIO_PULLUP_DISABLE,
-   .pull_down_en = GPIO_PULLDOWN_ENABLE,
-   .intr_type = GPIO_INTR_POSEDGE,
+   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for an remotely attached sensor
+   .pull_down_en = GPIO_PULLDOWN_DISABLE,
+   .intr_type = GPIO_INTR_NEGEDGE,
 };
 
 pcnt_config_t pcnt_1_config =
@@ -113,22 +113,31 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
 }
 
 //get the level and enqueue it.
-static void IRAM_ATTR gpio_isr_handler(void* arg)
+static void IRAM_ATTR gpio_isr_handler_0(void* arg)
 {
-    gpio_event_t evt;	
-    uint8_t i =0;
-    evt.gpio_num = (uint8_t) arg;
-    i = (evt.gpio_num == ENC0_SW_GPIO) ? 0 : 1;
-    evt.status = gpio_get_level(gpio_num);
-    xQueueSendFromISR(gpio_evt_queues[i], &evt, NULL);
+   gpio_evt_t evt;	
+   evt.gpio_num = ENC0_SW_GPIO;
+   evt.status = gpio_get_level(evt.gpio_num);
+   xQueueSendFromISR(gpio_evt_queues[0], &evt, NULL);
+   
+}
+
+//get the level and enqueue it.
+static void IRAM_ATTR gpio_isr_handler_1(void* arg)
+{
+   gpio_evt_t evt;	
+   evt.gpio_num = ENC1_SW_GPIO;
+   evt.status = gpio_get_level(evt.gpio_num);
+   xQueueSendFromISR(gpio_evt_queues[1], &evt, NULL);
+   
 }
 
 static void enc_0_gpio_init(void) 
 {
   gpio_config(&gpio_enc_0_config);
   gpio_install_isr_service(0);
-  gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler, (void*) ENC0_SW_GPIO);
-  gpio_evt_queues[0]  = xQueueCreate(10, sizeof(gpio_evt_t));
+  gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler_0, NULL);
+  gpio_evt_queues[0]  = xQueueCreate(2, sizeof(gpio_evt_t));
 }
 
 
@@ -171,8 +180,8 @@ void enc_1_gpio_init()
 {
   gpio_config(&gpio_enc_1_config);
   gpio_install_isr_service(0);
-  gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler, (void*) ENC1_SW_GPIO);
-  gpio_evt_queues[1]  = xQueueCreate(10, sizeof(gpio_evt_t));
+  gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler_1, NULL);
+  gpio_evt_queues[1]  = xQueueCreate(2, sizeof(gpio_evt_t));
 }
 
 
@@ -244,8 +253,8 @@ int8_t rotary_0_gpio_val( void )
   portBASE_TYPE res;
   gpio_evt_t evt;
 
-  res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY )
-  ret = (res) ? evt.status : -1;
+  res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY );
+  ret = (res == pdTRUE) ? evt.status : -1;
 
 return ret;  
 }
@@ -259,8 +268,8 @@ int8_t rotary_1_gpio_val( void )
   portBASE_TYPE res;
   gpio_evt_t evt;
 
-  res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY )
-  ret = (res) ? evt.status : -1;
+  res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY );
+  ret = (res == pdTRUE) ? evt.status : -1;
 
 return ret;  
 }
@@ -290,10 +299,10 @@ int8_t rotary_0_counter_val( void )
    if (res != pdTRUE) 
    {
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
-     MSG("| Reportet counter 0 :%2d |\n", rep_count);
+     //MSG("| Reportet counter 0 :%2d |\n", rep_count);
      return rep_count;
    }
-  return res;
+  return ret;
 }
 
 //returns the sanitized counter value for the defined max, min boundaries
@@ -321,7 +330,7 @@ int8_t rotary_1_counter_val( void )
    if (res != pdTRUE) 
    {
      rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
-     MSG("| Reportet counter 1 :%2d |\n", rep_count);
+     //MSG("| Reportet counter 1 :%2d |\n", rep_count);
      return rep_count;
    }
  return ret;
