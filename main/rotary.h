@@ -8,7 +8,7 @@
 */
 #ifndef ROTARY_H
 #define ROTARY_H
-
+//TODO: sdkconf for these defines
 #define PCNT0_PULSE_GPIO            12      // gpio for PCNT0
 #define PCNT0_CONTROL_GPIO         14
 #define ENC0_SW_GPIO               13
