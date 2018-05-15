@@ -12,7 +12,7 @@
 /* Initialises the nvs 
  * returns 0 in case of error, 1 for success
  */
-uint8_t init_nv(void)
+esp_err_t init_nv(void)
 {
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
@@ -24,18 +24,18 @@ uint8_t init_nv(void)
     }
     ESP_ERROR_CHECK( err );
  
-    return ((err != ESP_OK) ? 0 : 1 );
+    return err;
 }
     
 
 /* Opens the nvs section for a certain handle 
  * returns 0 in case of error, 1 for success
  */
-uint8_t open_nv(nvs_handle *my_handle)
+esp_err_t open_nv(nvs_handle *my_handle)
 {
     // Open
 
-    uint8_t err;
+    esp_err_t err;
     MSG("Opening Non-Volatile Storage (NVS) handle...\n ");
  
     err = nvs_open("storage", NVS_READWRITE, my_handle);
@@ -47,23 +47,24 @@ uint8_t open_nv(nvs_handle *my_handle)
 	return 1; //success
     }
 }
-        
 
-/* Read a uint8_t array from the nvs
- * requires a valid handle, uint8_t array pointer, array size, key name for the nvs section 
- * returns 0 in case of error, 1 for success
+
+
+
+/* Read a uint8_t value from the nvs
+ * requires a valid handle, uint8_t pointer, key name for the nvs section 
+ * returns ESP_ERR in case of error, ESP_OK for success
  */
-uint8_t read_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, const char *blob_name)
+esp_err_t read_u8_nv(nvs_handle my_handle, uint8_t *val, const char *val_name)
 {
-   uint8_t err;
+   esp_err_t err;
    // Read
-   MSG("Reading %s from NVS ...\n ", blob_name);
+   MSG("Reading %s from NVS ...\n ", val_name);
     
-   err = nvs_get_blob(my_handle, blob_name, blob, (size_t *)&blob_size);
+   err = nvs_get_u8(my_handle, val_name, val);
         switch (err) {
             case ESP_OK:
                 MSG("Done\n");
-		return 1;
                 break;
             case ESP_ERR_NVS_NOT_FOUND:
                 MSG("The value is not initialized yet!\n");
@@ -71,17 +72,63 @@ uint8_t read_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, con
             default :
                 MSG("Error (%s) reading!\n", esp_err_to_name(err));
         }
-	return 0; //err
+   return err; //err
+}
+
+/* Write a uint8_t to the nvs
+ * requires a valid handle, uint8_t pointer, key name for the nvs section 
+ * returns ESP_ERR in case of error, ESP_OK for success
+ */
+esp_err_t write_u8_nv(nvs_handle my_handle, uint8_t val, const char *val_name)
+{  
+   esp_err_t err;
+   // Write
+   MSG("Updating %s in NVS ...\n ", val_name);
+    
+   err = nvs_set_u8(my_handle, val_name, val);
+   
+   // Commit written value.
+   // After setting any values, nvs_commit() must be called to ensure changes are written
+   // to flash storage. Implementations may write to storage at other times,
+   // but this is not guaranteed.
+   MSG("Committing updates in NVS ...\n ");
+   err = nvs_commit(my_handle);
+   return err;
+}
+
+
+/* Read a uint8_t array from the nvs
+ * requires a valid handle, uint8_t array pointer, array size, key name for the nvs section 
+ * returns ESP_ERR in case of error, ESP_OK for success
+ */
+esp_err_t read_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, const char *blob_name)
+{
+   esp_err_t err;
+   // Read
+   MSG("Reading %s from NVS ...\n ", blob_name);
+    
+   err = nvs_get_blob(my_handle, blob_name, blob, (size_t *)&blob_size);
+        switch (err) {
+            case ESP_OK:
+                MSG("Done\n");
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                MSG("The value is not initialized yet!\n");
+                break;
+            default :
+                MSG("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+   return err; //err
 }
 
 
 /* Write a uint8_t array to the nvs
  * requires a valid handle, uint8_t array pointer, array size, key name for the nvs section 
- * returns 0 in case of error, 1 for success
+ * returns ESP_ERR in case of error, ESP_OK for success
  */
-uint8_t write_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, const char *blob_name)
+esp_err_t write_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, const char *blob_name)
 {  
-   uint8_t err;
+   esp_err_t err;
    // Write
    MSG("Updating %s in NVS ...\n ", blob_name);
     
@@ -93,7 +140,7 @@ uint8_t write_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, co
    // but this is not guaranteed.
    MSG("Committing updates in NVS ...\n ");
    err = nvs_commit(my_handle);
-   return ((err != ESP_OK) ? 0 : 1 );
+   return err;
 }
 
 
@@ -101,11 +148,11 @@ uint8_t write_blob_nv(nvs_handle my_handle, uint8_t *blob, uint8_t blob_size, co
  * requires a valid handle 
  * returns 1 for success
  */
-uint8_t close_nv(nvs_handle my_handle)
+esp_err_t close_nv(nvs_handle my_handle)
 {
    
    // Close
    nvs_close(my_handle);
-   return 1;
+   return ESP_OK;
 }
 
