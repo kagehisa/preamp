@@ -129,6 +129,26 @@ esp_err_t set_volume(uint8_t vol)
   }
 }
 
+esp_err_t get_fast_volume(uint8_t *vol)
+{
+  esp_err_t ret;
+  uint8_t i; 
+  uint32_t tmp;
+  
+  i=0;
+  tmp = adg_registers.volume;
+
+  do
+  {
+   tmp = (tmp >> 1);
+   i++;
+  }while(tmp > 0);
+  
+  *vol = tmp;
+  
+  return ret;
+}
+
 esp_err_t get_volume(uint8_t *vol)
 {
   esp_err_t ret;

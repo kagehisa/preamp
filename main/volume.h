@@ -18,6 +18,7 @@
 //get or set volume 
 esp_err_t set_volume(uint8_t vol);
 esp_err_t get_volume(uint8_t *vol);
+esp_err_t get_fast_volume(uint8_t *vol);
 
 //initialize module
 void volume_init( void );
