@@ -39,6 +39,34 @@ static void example_tg0_timer_init(int timer_idx, double timer_interval_sec)
 }
 
 
+
+
+void IRAM_ATTR timer_group0_isr(void *para)
+{
+  int timer_idx = (int) para;
+
+  uint8_t evt;
+  TIMERG0.hw_timer[timer_idx].update = 1;
+
+
+  if(vol_change == 1)
+  {
+    evt = 1;
+    xQueueSendFromISR(timer_queue, &evt, NULL);
+  }
+
+  //re enable interrupt and re enable the alarm
+  if ((intr_status & BIT(timer_idx)) && timer_idx == TIMER_0) 
+  {
+    TIMERG0.int_clr_timers.t0 = 1;
+  }
+
+  TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
+}
+
+
+
+
 /* Handling the volume case. 
  * This function is intended to be run as a Task
  * */
@@ -90,10 +118,7 @@ void volume_handler(void *pvParameter)
 
   }//end of mute
 
-
-  //TODO: wait for a timer and persit the value after a certain delay with no change..
-  //do this in a timer interrupt? and reset the timer if a volume change occurs?
-  //esp_err_t pers_volume( void );
+  // may decrease the queue waiting time.. TODO: adapting...
   if(xQueueReceive( timer_queue, &evt, (1000 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     pers_volume();
@@ -102,46 +127,6 @@ void volume_handler(void *pvParameter)
 
  }
 }
-
-
-
-void IRAM_ATTR timer_group0_isr(void *para)
-{
-  int timer_idx = (int) para;
-
-  uint8_t evt;
-  TIMERG0.hw_timer[timer_idx].update = 1;
-
-
-  if(vol_change == 1)
-  {
-    evt = 1;
-    xQueueSendFromISR(timer_queue, &evt, NULL);
-  }
-
-  //re enable interrupt and re enable the alarm
-  if ((intr_status & BIT(timer_idx)) && timer_idx == TIMER_0) 
-  {
-    TIMERG0.int_clr_timers.t0 = 1;
-  }
-
-  TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
