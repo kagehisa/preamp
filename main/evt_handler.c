@@ -9,12 +9,23 @@
 #include "relais.h"
 #include "volume.h"
 #include "rotary.h"
+#include "driver/timer.h"
+#include "evt_handler.h"
+
+#define TIMER_DIVIDER         16  //  Hardware timer clock divider
+#define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
+#define TIMER_INTERVAL0_SEC   (3) // sample test interval for the first timer
+#define TEST_WITHOUT_RELOAD   0        // testing will be done without auto reload
+#define TEST_WITH_RELOAD 1 // testing will be done with auto reload
+
+
+
 
 
 static uint8_t vol_change;
 xQueueHandle timer_queue;
 
-static void example_tg0_timer_init(int timer_idx, double timer_interval_sec)
+static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 {
   /* Select and initialize basic parameters of the timer */
   timer_config_t config;
@@ -39,6 +50,31 @@ static void example_tg0_timer_init(int timer_idx, double timer_interval_sec)
 }
 
 
+
+void IRAM_ATTR timer_group0_isr(void *para)
+{
+  int timer_idx = (int) para;
+
+  uint8_t evt;
+  TIMERG0.hw_timer[timer_idx].update = 1;
+
+
+  if(vol_change == 1)
+  {
+    evt = 1;
+    xQueueSendFromISR(timer_queue, &evt, NULL);
+  }
+
+  //re enable interrupt and re enable the alarm
+  if ((intr_status & BIT(timer_idx)) && timer_idx == TIMER_0) 
+  {
+    TIMERG0.int_clr_timers.t0 = 1;
+  }
+
+  TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
+}
+
+
 /* Handling the volume case. 
  * This function is intended to be run as a Task
  * */
@@ -55,7 +91,7 @@ void volume_handler(void *pvParameter)
  
  encoder_0_counter_init();
  volume_init(); 
-
+ tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
  
 
  get_fast_volume(&oldvol);
@@ -127,22 +163,6 @@ void IRAM_ATTR timer_group0_isr(void *para)
 
   TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void output_handler(void *pvParameter)
