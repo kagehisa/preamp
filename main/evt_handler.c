@@ -10,7 +10,13 @@
 #include "volume.h"
 #include "rotary.h"
 #include "driver/timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+
 #include "evt_handler.h"
+
+
 
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
@@ -24,6 +30,31 @@
 
 static uint8_t vol_change;
 xQueueHandle timer_queue;
+
+void IRAM_ATTR timer_group0_isr(void *para)
+{
+  int timer_idx = (int) para;
+
+  uint8_t evt;
+  uint32_t intr_status = TIMERG0.int_st_timers.val;
+
+  TIMERG0.hw_timer[timer_idx].update = 1;
+
+
+  if(vol_change == 1)
+  {
+    evt = 1;
+    xQueueSendFromISR(timer_queue, &evt, NULL);
+  }
+
+  //re enable interrupt and re enable the alarm
+  if ((intr_status & BIT(timer_idx)) && timer_idx == TIMER_0) 
+  {
+    TIMERG0.int_clr_timers.t0 = 1;
+  }
+
+  TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
+}
 
 static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 {
@@ -51,28 +82,7 @@ static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 
 
 
-void IRAM_ATTR timer_group0_isr(void *para)
-{
-  int timer_idx = (int) para;
 
-  uint8_t evt;
-  TIMERG0.hw_timer[timer_idx].update = 1;
-
-
-  if(vol_change == 1)
-  {
-    evt = 1;
-    xQueueSendFromISR(timer_queue, &evt, NULL);
-  }
-
-  //re enable interrupt and re enable the alarm
-  if ((intr_status & BIT(timer_idx)) && timer_idx == TIMER_0) 
-  {
-    TIMERG0.int_clr_timers.t0 = 1;
-  }
-
-  TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
-}
 
 
 /* Handling the volume case. 
@@ -89,7 +99,7 @@ void volume_handler(void *pvParameter)
  //pcnt0 is for volume
  //TODO:additional inits?
  
- encoder_0_counter_init();
+ encoder_0_counter_init(1);
  volume_init(); 
  tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
  
@@ -105,14 +115,14 @@ void volume_handler(void *pvParameter)
     set_volume(tmp);
     oldvol = tmp;
     vol_change = 1;
-    loopcnt = 0;
+    //loopcnt = 0;
 
     //add stuff like add display
   }
 
   if(rotary_0_gpio_val() == 1)//butten pressed mute it is...
   {
-   loopcnt = 0;	  
+   //loopcnt = 0;	  
    if(mute == 0)
    {
      err = get_volume(&mutesave);

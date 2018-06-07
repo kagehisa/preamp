@@ -131,7 +131,7 @@ esp_err_t set_volume(uint8_t vol)
 
 esp_err_t get_fast_volume(uint8_t *vol)
 {
-  esp_err_t ret;
+  esp_err_t ret = ESP_OK;
   uint8_t i; 
   uint32_t tmp;
   
