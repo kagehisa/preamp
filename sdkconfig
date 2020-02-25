@@ -115,6 +115,16 @@ CONFIG_BOOTLOADER_RESERVE_RTC_SIZE=0
 # end of Security features
 
 #
+# 
+#
+
+#
+# MSG ouput disable
+#
+# CONFIG_MSG_SILENT is not set
+# end of MSG ouput disable
+
+#
 # Relais GPIO Pins
 #
 CONFIG_RELAIS_GPIO_1=23
@@ -123,12 +133,6 @@ CONFIG_RELAIS_GPIO_3=21
 CONFIG_RELAIS_GPIO_4=19
 CONFIG_RELAIS_GPIO_5=18
 # end of Relais GPIO Pins
-
-#
-# MSG ouput disable
-#
-# CONFIG_MSG_SILENT is not set
-# end of MSG ouput disable
 
 #
 # Compiler options

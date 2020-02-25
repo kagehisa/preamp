@@ -1,0 +1,59 @@
+menu "Relais GPIO Pins"
+
+config RELAIS_GPIO_1
+    int "Relais 1 GPIO number"
+	range 0 34
+	default 23
+	help
+		GPIO number (IOxx) for Relais on and off.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+
+config RELAIS_GPIO_2
+    int "Relais 2 GPIO number"
+	range 0 34
+	default 22
+	help
+		GPIO number (IOxx) for Relais on and off.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config RELAIS_GPIO_3
+    int "Relais 3 GPIO number"
+	range 0 34
+	default 21
+	help
+		GPIO number (IOxx) for Relais on and off.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config RELAIS_GPIO_4
+    int "Relais 4 GPIO number"
+	range 0 34
+	default 19
+	help
+		GPIO number (IOxx) for Relais on and off.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config RELAIS_GPIO_5
+    int "Relais 5 GPIO number"
+	range 0 34
+	default 18
+	help
+		GPIO number (IOxx) for Relais on and off.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+endmenu
