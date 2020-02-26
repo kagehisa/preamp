@@ -1,0 +1,44 @@
+#menu "PreAmp configuration options"
+	menu "Volume I2C configuration"
+
+	config I2C_SCL_IO
+    	int "I2C_SCL_IO I2C Master clock pin"
+		range 0 34
+		default 19
+		help
+			GPIO number (IOxx) for I2C master clock.
+
+			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+			GPIOs 35-39 are input-only so cannot be used as outputs.
+
+
+	config I2C_SDA_IO
+    	int "I2C_SDL_IO I2C Master data line pin"
+		range 0 34
+		default 18
+		help
+			GPIO number (IOxx) for I2C master data.
+
+			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
+
+			GPIOs 35-39 are input-only so cannot be used as outputs.
+
+	config I2C_MASTER_NUM
+    	int "I2C Master number"
+		range 0 1
+		default 1
+		help
+			I2C Master port number.
+
+	config I2C_MASTER_FREQ
+    	int "I2C Master Frequency in Hz"
+		range  100000 400000
+		default 100000
+		help
+			I2C Master Frequency in Hz. Usually 100000 Hz is considered standard mode.
+
+	
+
+	endmenu
+#endmenu

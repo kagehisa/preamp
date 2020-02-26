@@ -24,7 +24,7 @@
 #define NACK_VAL                           0x1              /*!< I2C nack value */
 
 //TODO: sdkconfig
-#define I2C_SCL_IO          19               /*!< gpio number for I2C master clock */
+#define I2C_SCL_IO          CONFIG_I2C_SCL_IO               /*!< gpio number for I2C master clock */
 //TODO: sdkconfig
 #define I2C_SDA_IO          18               /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM             I2C_NUM_1        /*!< I2C port number for master dev */
