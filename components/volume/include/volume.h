@@ -8,12 +8,6 @@
 #ifndef VOLUME_H
 #define VOLUME_H
 
-#define MAX_VOL		24		//TODO: sdkconfig
-#define MIN_VOL		 1		//TODO: sdkconfig
-#define MUTE_VOL	 0                  //TODO: sdkconfig
-
-
-
 
 //get or set volume 
 esp_err_t set_volume(uint8_t vol);

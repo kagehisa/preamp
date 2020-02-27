@@ -1,7 +1,7 @@
 #menu "PreAmp configuration options"
 	menu "Volume I2C configuration"
 
-	config I2C_SCL_IO
+	config I2C_SCL_VOL_IO
     	int "I2C_SCL_IO I2C Master clock pin"
 		range 0 34
 		default 19
@@ -13,7 +13,7 @@
 			GPIOs 35-39 are input-only so cannot be used as outputs.
 
 
-	config I2C_SDA_IO
+	config I2C_SDA_VOL_IO
     	int "I2C_SDL_IO I2C Master data line pin"
 		range 0 34
 		default 18
@@ -24,21 +24,63 @@
 
 			GPIOs 35-39 are input-only so cannot be used as outputs.
 
-	config I2C_MASTER_NUM
+	config I2C_MASTER_VOL_NUM
     	int "I2C Master number"
 		range 0 1
 		default 1
 		help
-			I2C Master port number.
+			I2C Master port number used for the volume control
 
-	config I2C_MASTER_FREQ
+	config I2C_MASTER_VOL_FREQ
     	int "I2C Master Frequency in Hz"
 		range  100000 400000
 		default 100000
 		help
-			I2C Master Frequency in Hz. Usually 100000 Hz is considered standard mode.
+			I2C Master port Frequency in Hz. Usually 100000 Hz is considered standard mode.
 
 	
+	config ADG_U1_ADDR
+    	hex "U1 ADDR for ADG slave 1 in HEX"
+		range  0x00 0xFF
+		default 0x4C
+		help
+			I2C slave adress for ADG U1.
+
+	config ADG_U2_ADDR
+    	hex "U2 ADDR for ADG slave 2 in HEX"
+		range  0x00 0xFF
+		default 0x4D
+		help
+			I2C slave adress for ADG U2.
+
+	config ADG_U3_ADDR
+    	hex "U1 ADDR for ADG slave 3 in HEX"
+		range  0x00 0xFF
+		default 0x4E
+		help
+			I2C slave adress for ADG U3.
+
+	config MAX_VOL_STEPS
+    	int "Maximum attenuation step count"
+		range  1 48
+		default 24
+		help
+			Step count that represents the maximum Volume.
+
+	config MIN_VOL_STEPS
+    	int "Minimum attenuation step count"
+		range  1 48
+		default 1
+		help
+			Step count that represents the minimum Volume.
+
+	config MUTE_VOL_STEP
+    	int "Mute attenuation step count"
+		range  0 48
+		default 0
+		help
+			Step count that represents the muted Volume.
+
 
 	endmenu
 #endmenu

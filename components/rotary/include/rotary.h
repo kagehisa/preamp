@@ -8,20 +8,6 @@
 */
 #ifndef ROTARY_H
 #define ROTARY_H
-//TODO: sdkconf for these defines
-#define PCNT0_PULSE_GPIO            12      // gpio for PCNT0
-#define PCNT0_CONTROL_GPIO         14
-#define ENC0_SW_GPIO               13
-
-#define PCNT1_PULSE_GPIO            27      // gpio for PCNT1
-#define PCNT1_CONTROL_GPIO         26
-#define ENC1_SW_GPIO               25
-
-#define REP_0_MAX		24
-#define REP_0_MIN		1
-
-#define REP_1_MAX		5
-#define REP_1_MIN		1
 
 
 typedef enum {

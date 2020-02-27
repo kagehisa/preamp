@@ -1,0 +1,47 @@
+menu "Rotary encoder GPIO Pin assignment"
+
+config PCNT0_PULSE_GPIO
+    int "GPIO number for Pulsecounter 0 Clock"
+	range 0 34
+	default 12
+	help
+		GPIO number (IOxx) for Pulsecounter 0 Clock.
+
+config PCNT0_CONTROL_GPIO
+    int "GPIO number for Pulsecounter 0 Data Line"
+	range 0 34
+	default 14
+	help
+		GPIO number (IOxx) for Pulsecounter 0 Data Line.
+
+config ENC0_SW_GPIO
+    int "GPIO number for Pulsecounter 0 Switch"
+	range 0 34
+	default 13
+	help
+		GPIO number (IOxx) for Pulsecounter 0 Switch Button.
+
+config PCNT1_PULSE_GPIO
+    int "GPIO number for Pulsecounter 1 Clock"
+	range 0 34
+	default 27
+	help
+		GPIO number (IOxx) for Pulsecounter 1 Clock.
+
+config PCNT1_CONTROL_GPIO
+    int "GPIO number for Pulsecounter 1 Data Line"
+	range 0 34
+	default 27
+	help
+		GPIO number (IOxx) for Pulsecounter 1 Data Line.
+
+config ENC1_SW_GPIO
+    int "GPIO number for Pulsecounter 1 Switch"
+	range 0 34
+	default 25
+	help
+		GPIO number (IOxx) for Pulsecounter 1 Switch Button.
+
+
+
+endmenu

@@ -8,6 +8,7 @@
 #include "msg_stuff.h"
 #include "nv_acc.h"
 #include "driver/i2c.h"
+#include "sdkconfig.h"
 #include "volume.h"
 
 #define I2C_MASTER_TX_BUF_DISABLE  0                /*!< I2C master do not need buffer */
@@ -23,20 +24,20 @@
 #define ACK_VAL                            0x0              /*!< I2C ack value */
 #define NACK_VAL                           0x1              /*!< I2C nack value */
 
-//TODO: sdkconfig
-#define I2C_SCL_IO          CONFIG_I2C_SCL_IO               /*!< gpio number for I2C master clock */
-//TODO: sdkconfig
-#define I2C_SDA_IO          18               /*!< gpio number for I2C master data  */
-#define I2C_MASTER_NUM             I2C_NUM_1        /*!< I2C port number for master dev */
-#define I2C_MASTER_FREQ_HZ         100000           /*!< I2C master clock frequency */
+//values provided by sdkconfig
+#define I2C_SCL_IO          	CONFIG_I2C_SCL_VOL_IO       /*!< gpio number for I2C master clock */
+#define I2C_SDA_IO          	CONFIG_I2C_SDA_VOL_IO       /*!< gpio number for I2C master data  */
+#define I2C_MASTER_NUM          CONFIG_I2C_MASTER_VOL_NUM   /*!< I2C port number for master dev */
+#define I2C_MASTER_FREQ_HZ      CONFIG_I2C_MASTER_VOL_FREQ  /*!< I2C master clock frequency */
 
+#define U1_ADDR			CONFIG_ADG_U1_ADDR          /*!< slave address for U1 */
+#define U2_ADDR                 CONFIG_ADG_U2_ADDR          /*!< slave address for U2 */
+#define U3_ADDR                 CONFIG_ADG_U3_ADDR          /*!< slave address for U3 */
 
-//TODO: sdkconfig
-#define U1_ADDR                            0x4C             /*!< slave address for U1 */
-#define U2_ADDR                            0x4D             /*!< slave address for U2 */
-#define U3_ADDR                            0x4E             /*!< slave address for U3 */
-
-
+#define MAX_VOL         	CONFIG_MAX_VOL_STEPS        /*maximum volume count */
+#define MIN_VOL          	CONFIG_MIN_VOL_STEPS        /*smallest volume step */
+#define MUTE_VOL         	CONFIG_MUTE_VOL_STEP        /*mute (almost) */
+// end sdkconfig
 
 typedef union
   {

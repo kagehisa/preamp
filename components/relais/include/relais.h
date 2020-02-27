@@ -9,17 +9,7 @@
 #ifndef RELAIS_H
 #define RELAIS_H
 
-#include "sdkconfig.h"
 #include "esp_err.h"
-
-/* Can run 'make menuconfig' to choose the GPIO to blink,
-   or you can edit the following line and set a number here.
-*/
-#define RELAIS_GPIO_1 CONFIG_RELAIS_GPIO_1
-#define RELAIS_GPIO_2 CONFIG_RELAIS_GPIO_2
-#define RELAIS_GPIO_3 CONFIG_RELAIS_GPIO_3
-#define RELAIS_GPIO_4 CONFIG_RELAIS_GPIO_4
-#define RELAIS_GPIO_5 CONFIG_RELAIS_GPIO_5
 
 #define STATE_OFF 0
 #define STATE_ON  1

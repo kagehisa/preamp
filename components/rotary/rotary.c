@@ -17,7 +17,26 @@
 #include "driver/periph_ctrl.h"
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
+#include "sdkconfig.h"
 #include "rotary.h"
+
+//values provided by sdkconfig
+#define PCNT0_PULSE_GPIO	CONFIG_PCNT0_PULSE_GPIO	 // gpio for PCNT0
+#define PCNT0_CONTROL_GPIO      CONFIG_PCNT0_CONTROL_GPIO
+#define ENC0_SW_GPIO            CONFIG_ENC0_SW_GPIO 
+
+#define PCNT1_PULSE_GPIO	CONFIG_PCNT1_PULSE_GPIO	 // gpio for PCNT1
+#define PCNT1_CONTROL_GPIO      CONFIG_PCNT1_CONTROL_GPIO
+#define ENC1_SW_GPIO            CONFIG_ENC1_SW_GPIO 
+
+//end sdkconfig
+
+#define REP_0_MAX               24
+#define REP_0_MIN               1
+#define REP_1_MAX               5
+#define REP_1_MIN               1
+
+
 
 #define USED_UNITS 	2
 

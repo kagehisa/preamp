@@ -117,10 +117,10 @@ void volume_handler(void *pvParameter)
     vol_change = 1;
     //loopcnt = 0;
 
-    //add stuff like add display
+    //TODO: add stuff like update the display
   }
 
-  if(rotary_0_gpio_val() == 1)//butten pressed mute it is...
+  if(rotary_0_gpio_val() == 1)//button pressed mute it is...
   {
    //loopcnt = 0;	  
    if(mute == 0)

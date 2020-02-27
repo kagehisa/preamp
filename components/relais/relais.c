@@ -9,7 +9,16 @@
 #include "driver/gpio.h"
 #include "msg_stuff.h"
 #include "nv_acc.h"
+#include "sdkconfig.h"
 #include "relais.h"
+
+//values provided by sdkconfig
+#define RELAIS_GPIO_1 CONFIG_RELAIS_GPIO_1
+#define RELAIS_GPIO_2 CONFIG_RELAIS_GPIO_2
+#define RELAIS_GPIO_3 CONFIG_RELAIS_GPIO_3
+#define RELAIS_GPIO_4 CONFIG_RELAIS_GPIO_4
+#define RELAIS_GPIO_5 CONFIG_RELAIS_GPIO_5
+//end sdkconfig
 
 
 /* Structure that represents the state of the relais and the corresponding GPIO pins  */
