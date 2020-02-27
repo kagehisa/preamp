@@ -9,7 +9,16 @@
 #include "driver/gpio.h"
 #include "msg_stuff.h"
 #include "nv_acc.h"
+#include "sdkconfig.h"
 #include "relais.h"
+
+//values provided by sdkconfig
+#define RELAIS_GPIO_1 CONFIG_RELAIS_GPIO_1
+#define RELAIS_GPIO_2 CONFIG_RELAIS_GPIO_2
+#define RELAIS_GPIO_3 CONFIG_RELAIS_GPIO_3
+#define RELAIS_GPIO_4 CONFIG_RELAIS_GPIO_4
+#define RELAIS_GPIO_5 CONFIG_RELAIS_GPIO_5
+//end sdkconfig
 
 
 /* Structure that represents the state of the relais and the corresponding GPIO pins  */
@@ -27,19 +36,19 @@ const char* rel_key = "relais_state";
 
 /* Module helper functions  */
 
-static uint8_t init_relais_state( void )
+static esp_err_t init_relais_state( void )
 {
-   uint8_t ret = 0;
+   esp_err_t ret = ESP_OK;
 
    ret = init_nv();
-   if(ret)
+   if(ret == ESP_OK)
    {
     ret = open_nv(&relais_handle);
 
-    if(ret)
+    if(ret == ESP_OK)
     { 
 	ret = read_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-        if(!ret) //assuming the entry does noty exist yet
+        if(ret != ESP_OK) //assuming the entry does noty exist yet
         {
           ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
         }
@@ -52,7 +61,7 @@ static uint8_t init_relais_state( void )
 
 static uint8_t get_gpio_by_index(uint8_t index)
 {
-     uint8_t ret;
+     esp_err_t ret;
      ret = (index < RELAIS_NUM) ? (&relais)->relais[index] : REL_ERR;
 
      return ret;	
@@ -81,17 +90,18 @@ static uint8_t active_relais_count( void )
 
 /* Public functions  */
 
-uint8_t init_relais( void )
+esp_err_t init_relais( void )
 {
 /* Initialises the relays with the last state stored in nvram or
  * if no nv value is available with a clear all off state 
  * */
 
-   uint8_t ret, active=0;
+   esp_err_t ret; 
+   uint8_t active=0;
 
    ret = init_relais_state();
    MSG("debug msg init func; ret = %i \n", ret);
-   if(ret)
+   if(ret == ESP_OK)
    {
      active = get_active_relais();
 	MSG("active = %i \n", active);     
@@ -107,7 +117,7 @@ uint8_t init_relais( void )
  return ret;
 }
 
-uint8_t switch_relais_on(uint8_t relais_num)
+esp_err_t switch_relais_on(uint8_t relais_num)
 {
 
 /* Sets the GPIO that controls the apropriate relais high.
@@ -116,7 +126,8 @@ uint8_t switch_relais_on(uint8_t relais_num)
  * */
   if(active_relais_count() == 0 || relais_num == get_active_relais())
   {
-     uint8_t gpio_num, ret;
+     uint8_t gpio_num;
+     esp_err_t ret;
 
      gpio_num = get_gpio_by_index(relais_num-1);
    
@@ -128,16 +139,16 @@ uint8_t switch_relais_on(uint8_t relais_num)
 
      ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
 
-    return ( (ret) ? get_state_by_index(relais_num-1) : REL_ERR );
+    return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
  
   }
 
-  return REL_ERR; // more than on active relais and desired active relais != current active one....
+  return ESP_ERR_INVALID_STATE; // more than on active relais and desired active relais != current active one....
 
 }
 
 
-uint8_t switch_relais_off(uint8_t relais_num)
+esp_err_t switch_relais_off(uint8_t relais_num)
 {
 
 /* Sets the GPIO that controls the apropriate relais high.
@@ -145,7 +156,8 @@ uint8_t switch_relais_off(uint8_t relais_num)
  * relais_num is a number between 1 and NUM_RELAIS or OUTPUT_OFF
  * */
 
-    uint8_t gpio_num, ret;
+    uint8_t gpio_num;
+    esp_err_t ret;
     
     gpio_num = (relais_num != OUTPUT_OFF) ? get_gpio_by_index(relais_num-1) : get_active_relais();
 
@@ -159,10 +171,10 @@ uint8_t switch_relais_off(uint8_t relais_num)
        (&relais)->state[relais_num-1] = STATE_OFF;
     
        ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-       return ( (ret) ? get_state_by_index(relais_num-1) : REL_ERR );
+       return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
      
     }
- return REL_ERR;
+ return ESP_ERR_INVALID_ARG;
 }
 
 uint8_t get_active_relais(void)

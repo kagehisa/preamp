@@ -57,13 +57,3 @@ config RELAIS_GPIO_5
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
 endmenu
-
-
-menu "MSG ouput disable"
-
-config MSG_SILENT
-    bool "Disable printf based Message ouput"
-    default 0
-    help
-		Disable MSG output for the target <make monitor>
-endmenu
