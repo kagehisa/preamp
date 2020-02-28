@@ -102,7 +102,7 @@ void volume_handler(void *pvParameter)
  encoder_0_counter_init(1);
  volume_init(); 
  tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
- 
+ //TODO display init
 
  get_fast_volume(&oldvol);
 
@@ -150,9 +150,36 @@ void volume_handler(void *pvParameter)
 
 void output_handler(void *pvParameter)
 {
+esp_err_t err;
+uint8_t old = 0, tmp = 0, out_change = 0;
+encoder_1_counter_init(1);
+init_relais();
+//TODO display init, maybe as independent display task.....	
+old = get_active_relais();
+
  while(1)
  {
- //pcnt1 is the output chooser
+	tmp = rotary_1_counter_val();
+	
+	if(tmp != old)
+	{
+		old= (out_change == 0) ? tmp : old; //remeber the first old value to switch it off
+		
+		//no output chenge yet, since writing output also writes nv ram
+		//update display already, when writing relais persit display as well
+		//relay writing on button press
+		out_change = 1;
+	}
+	
+	if(rotary_1_gpio_val() == 1 && out_change == 1) //button was pressed so we switch the selected output on
+	{
+		switch_relais_off(old);
+		switch_relais_on(tmp);
+		out_change = 0;
+		old=tmp;
+	}
+
+//pcnt1 is the output chooser
  }
 }
 
