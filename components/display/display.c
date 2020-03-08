@@ -18,15 +18,15 @@
 
 /*--------------values per Display------------*/
 //derive from config
-#define I2CVOLADDRESS CONFIG_VOL_ADDR
-#define VOLDISPWIDTH CONFIG_VOL_DISP_WIDTH
-#define VOLDISPHEIGHT CONFIG_VOL_DISP_HEIGHT
+#define I2C_VOL_ADDRESS CONFIG_VOL_ADDR
+#define VOL_DISP_WIDTH CONFIG_VOL_DISP_WIDTH
+#define VOL_DISP_HEIGHT CONFIG_VOL_DISP_HEIGHT
 #define VOLRESETPIN CONFIG_VOLRESETPIN
 
-#define I2CVOLADDRESS CONFIG_INP_ADDR
-#define VOLDISPWIDTH CONFIG_INP_DISP_WIDTH
-#define VOLDISPHEIGHT CONFIG_INP_DISP_HEIGHT
-#define VOLRESETPIN CONFIG_INPRESETPIN
+#define I2C_INP_ADDRESS CONFIG_INP_ADDR
+#define INP_DISP_WIDTH CONFIG_INP_DISP_WIDTH
+#define INP_DISP_HEIGHT CONFIG_INP_DISP_HEIGHT
+#define INPRESETPIN CONFIG_INPRESETPIN
 
 
 #define VOL_FONT Font_droid_sans_fallback_24x28
@@ -75,7 +75,7 @@ void volDispWrite(uint8_t volume) //manually write and update the display
 esp_err_t init_volume_disp(void)
 {
 	ESP_LOGI( LOG_TAG, "Starting Initialisation for Volume Display.\n" );
-	if( DefaultBusInit( &VolDisplay, I2CVolAddress, VolDispWidth, VolDispHeight, VolResetPin ) == ESP_OK )
+	if( DefaultBusInit( &VolDisplay, I2C_VOL_ADDRESS, VOL_DISP_WIDTH, VOL_DISP_HEIGHT, VOLRESETPIN ) == ESP_OK )
 	{
     ESP_LOGI( LOG_TAG, "Volume Display Init Succesfull.\n" );
 	  SSD1306_Clear( &VolDisplay, SSD_COLOR_BLACK );
@@ -89,7 +89,7 @@ esp_err_t init_volume_disp(void)
 }
 
 
-void inpDispWrite(uint8_t input) //manually write and update the display
+void inpDispWrite(uint8_t input_num) //manually write and update the display
 {
   const char* outs[] = {"0", "1", "2", "3", "4", "5", "6"}
   SSD1306_Clear( &InpDisplay, SSD_COLOR_BLACK );
@@ -100,7 +100,7 @@ void inpDispWrite(uint8_t input) //manually write and update the display
 esp_err_t initInpDispl( void ) //init function for input chooser display
 {
 	ESP_LOGI( LOG_TAG, "Starting Initialisation for Input chooser Display.\n" );
-	if( DefaultBusInit( &InpDisplay, I2CInpAddress, InpDispWidth, InpDispHeight, InpResetPin ) == ESP_OK )
+	if( DefaultBusInit( &InpDisplay, I2C_INP_ADDRESS, INP_DISP_WIDTH, INP_DISP_HEIGHT, INPRESETPIN ) == ESP_OK )
 	{
     ESP_LOGI( LOG_TAG, "Input chooser Display Init Succesfull.\n" );
 	  SSD1306_Clear( &InpDisplay, SSD_COLOR_BLACK );

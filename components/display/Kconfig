@@ -32,7 +32,7 @@
 	config INP_DISP_ADDR
 	   	hex "I2C address of input display"
 			range 0x00 0x7F
-			default 0x3C
+			default 0x3D
 			help
 					I2C address in hex of the display used to show the input source.
 

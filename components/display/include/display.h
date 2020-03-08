@@ -10,13 +10,13 @@ esp_err_t init_volDisp( void );
 void volDispWrite(uint8_t volume);
 
 //write "MUTE" and update the display
-void volDispMute( void )
+void volDispMute( void );
 
 
 //init function for input chooser display
 esp_err_t initInpDispl( void );
 
 //manually write and update the display
-void inpDispWrite(uint8_t input);
+void inpDispWrite(uint8_t input_num);
 
 #endif
