@@ -1,0 +1,62 @@
+#menu "PreAmp configuration options"
+	menu "I2C display configuration"
+
+	config VOL_DISP_ADDR
+	    	hex "I2C address of volume display"
+		range 0x00 0x7F
+		default 0x3C
+		help
+			I2C address in hex of the display used to show the volume level.
+
+	config VOL_DISP_WIDTH
+    	int "Pixel width of Display"
+		range 0 128
+		default 128
+		help
+			With in pixel of the display showing the current volume.
+
+	 config VOL_DISP_HEIGHT
+				int "Pixel height of Display"
+			range 0 64
+			default 64
+			help
+				Height in pixel of the display showing the current volume.
+
+	config VOLRESETPIN
+    	int "GPIO Number of Reset Pin, -1 if none."
+		range -1 64
+		default -1
+		help
+			GPIO pin for the hard reset pin. If the Display does not have one use -1.
+
+	config INP_DISP_ADDR
+	   	hex "I2C address of input display"
+			range 0x00 0x7F
+			default 0x3D
+			help
+					I2C address in hex of the display used to show the input source.
+
+		config INP_DISP_WIDTH
+	    	int "Pixel width of Display"
+			range 0 128
+			default 128
+			help
+				With in pixel of the display showing the current input source.
+
+	 	config INP_DISP_HEIGHT
+				int "Pixel height of Display"
+				range 0 64
+				default 64
+				help
+					Height in pixel of the display showing the current input source.
+
+		config INPRESETPIN
+		   	int "GPIO Number of Reset Pin, -1 if none."
+			range -1 64
+			default -1
+			help
+				GPIO pin for the hard reset pin. If the Display does not have one use -1.
+
+
+	endmenu
+#endmenu
