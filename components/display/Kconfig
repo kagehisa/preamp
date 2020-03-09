@@ -1,5 +1,5 @@
 #menu "PreAmp configuration options"
-	menu "Volume I2C configuration"
+	menu "I2C display configuration"
 
 	config VOL_DISP_ADDR
 	    	hex "I2C address of volume display"

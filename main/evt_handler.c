@@ -169,14 +169,16 @@ old = get_active_relais();
 		old= (out_change == 0) ? tmp : old; //remeber the first old value to switch it off
 
 		//no output change yet, since writing output also writes nv ram
-		//update display already, when writing relais persit display as well
+		//update display already, when writing relais persist display as well
 		//relay writing on button press
+    inpDispWrite(tmp);
 		out_change = 1;
 	}
 
 	if(rotary_1_gpio_val() == 1 && out_change == 1) //button was pressed so we switch the selected output on
 	{
 		switch_relais_off(old);
+    inpDispWrite(tmp);
 		switch_relais_on(tmp);
 		out_change = 0;
 		old=tmp;
