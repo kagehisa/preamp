@@ -103,7 +103,7 @@ void volume_handler(void *pvParameter)
  encoder_0_counter_init(1);
  volume_init();
  tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
- init_volDisp();
+ initVolDisp();
 
  get_fast_volume(&oldvol);
 
@@ -150,9 +150,8 @@ void volume_handler(void *pvParameter)
 
 
 
-void output_handler(void *pvParameter)
+void input_handler(void *pvParameter)
 {
-esp_err_t err;
 uint8_t old = 0, tmp = 0, out_change = 0;
 encoder_1_counter_init(1);
 init_relais();

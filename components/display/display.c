@@ -18,29 +18,29 @@
 
 /*--------------values per Display------------*/
 //derive from config
-#define I2C_VOL_ADDRESS CONFIG_VOL_ADDR
+#define I2C_VOL_ADDRESS CONFIG_VOL_DISP_ADDR
 #define VOL_DISP_WIDTH CONFIG_VOL_DISP_WIDTH
 #define VOL_DISP_HEIGHT CONFIG_VOL_DISP_HEIGHT
 #define VOLRESETPIN CONFIG_VOLRESETPIN
 
-#define I2C_INP_ADDRESS CONFIG_INP_ADDR
+#define I2C_INP_ADDRESS CONFIG_INP_DISP_ADDR
 #define INP_DISP_WIDTH CONFIG_INP_DISP_WIDTH
 #define INP_DISP_HEIGHT CONFIG_INP_DISP_HEIGHT
 #define INPRESETPIN CONFIG_INPRESETPIN
 
 
-#define VOL_FONT Font_droid_sans_fallback_24x28
-#define INP_FONT Font_droid_sans_fallback_24x28
+#define VOL_FONT &Font_droid_sans_fallback_24x28
+#define INP_FONT &Font_droid_sans_fallback_24x28
 
 struct SSD1306_Device VolDisplay;
 struct SSD1306_Device InpDisplay;
 
 
 
-static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, static const uint8_t I2CAddress, static const uint8_t DispWidth, static const uint8_t DispHeight, static const uint8_t ResetPin)
+static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, const uint8_t I2CAddress, const uint8_t DispWidth, const uint8_t DispHeight, const uint8_t ResetPin)
 {
         assert( SSD1306_I2CMasterInitDefault( ) == true );
-        assert( SSD1306_I2CMasterAttachDisplayDefault( Displayhandle, DispWidth, DispHeight, I2CAddress, ResetPin ) == true );
+        assert( SSD1306_I2CMasterAttachDisplayDefault( DisplayHandle, DispWidth, DispHeight, I2CAddress, ResetPin ) == true );
 
     return ESP_OK;
 }
@@ -48,7 +48,7 @@ static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, static co
 
 static void vol_to_bar(uint8_t volume)
 {
-  uint8_t xMin = 3, xMax = 123, yMin = 3, yMax = 59;
+  uint8_t xMin = 3, yMin = 3, yMax = 59;
   uint8_t bar_width = 5;
 
   for(int i = xMin, j = xMin+bar_width, count = 0; count <= volume; i+=bar_width, j+=bar_width, count++)
@@ -60,7 +60,7 @@ static void vol_to_bar(uint8_t volume)
 void volDispMute( void ) //manually write and update the display
 {
   SSD1306_Clear( &VolDisplay, SSD_COLOR_BLACK );
-  SSD1306_FontDrawAnchoredString( &VolDisplay, TextAnchor_Center, "MUTE", ;SSD_COLOR_WHITE );
+  SSD1306_FontDrawAnchoredString( &VolDisplay, TextAnchor_Center, "MUTE", SSD_COLOR_WHITE );
   SSD1306_Update( &VolDisplay );
 }
 
@@ -72,7 +72,7 @@ void volDispWrite(uint8_t volume) //manually write and update the display
 }
 
 
-esp_err_t init_volume_disp(void)
+esp_err_t initVolDisp(void)
 {
 	ESP_LOGI( LOG_TAG, "Starting Initialisation for Volume Display.\n" );
 	if( DefaultBusInit( &VolDisplay, I2C_VOL_ADDRESS, VOL_DISP_WIDTH, VOL_DISP_HEIGHT, VOLRESETPIN ) == ESP_OK )
@@ -81,7 +81,7 @@ esp_err_t init_volume_disp(void)
 	  SSD1306_Clear( &VolDisplay, SSD_COLOR_BLACK );
 	  SSD1306_SetFont( &VolDisplay, VOL_FONT );
     SSD1306_Update( &VolDisplay );
-		SSD1306_FontDrawAnchoredString( &VolDisplay, TextAnchor_Center, "Volume", ;SSD_COLOR_WHITE );
+		SSD1306_FontDrawAnchoredString( &VolDisplay, TextAnchor_Center, "Volume", SSD_COLOR_WHITE );
     SSD1306_Update( &VolDisplay );
   }else{ return ESP_FAIL; }
 
@@ -91,9 +91,9 @@ esp_err_t init_volume_disp(void)
 
 void inpDispWrite(uint8_t input_num) //manually write and update the display
 {
-  const char* outs[] = {"0", "1", "2", "3", "4", "5", "6"}
+  const char* outs[] = {"0", "1", "2", "3", "4", "5", "6"};
   SSD1306_Clear( &InpDisplay, SSD_COLOR_BLACK );
-  SSD1306_FontDrawAnchoredString( &InpDisplay, TextAnchor_Center, outs[input], ;SSD_COLOR_WHITE );
+  SSD1306_FontDrawAnchoredString( &InpDisplay, TextAnchor_Center, outs[input_num], SSD_COLOR_WHITE );
   SSD1306_Update( &InpDisplay );
 }
 
@@ -106,7 +106,7 @@ esp_err_t initInpDispl( void ) //init function for input chooser display
 	  SSD1306_Clear( &InpDisplay, SSD_COLOR_BLACK );
 	  SSD1306_SetFont( &InpDisplay, INP_FONT );
     SSD1306_Update( &InpDisplay );
-		SSD1306_FontDrawAnchoredString( &InpDisplay, TextAnchor_Center, "Input", ;SSD_COLOR_WHITE );
+		SSD1306_FontDrawAnchoredString( &InpDisplay, TextAnchor_Center, "Input", SSD_COLOR_WHITE );
     SSD1306_Update( &InpDisplay );
   }else{ return ESP_FAIL; }
 

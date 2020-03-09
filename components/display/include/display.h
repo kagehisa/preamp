@@ -4,7 +4,7 @@
 #include "esp_err.h"
 
 //init function for volume display
-esp_err_t init_volDisp( void );
+esp_err_t initVolDisp( void );
 
 //write volume value in the form of a bar graph and update the display
 void volDispWrite(uint8_t volume);

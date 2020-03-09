@@ -13,6 +13,6 @@
 
 void volume_handler(void *pvParameter);
 
-void output_handler(void *pvParameter);
+void input_handler(void *pvParameter);
 
 #endif /* MSG_STUFF_H */
