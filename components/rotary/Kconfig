@@ -31,7 +31,7 @@ config PCNT1_PULSE_GPIO
 config PCNT1_CONTROL_GPIO
     int "GPIO number for Pulsecounter 1 Data Line"
 	range 0 34
-	default 27
+	default 26
 	help
 		GPIO number (IOxx) for Pulsecounter 1 Data Line.
 

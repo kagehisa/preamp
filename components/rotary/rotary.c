@@ -9,7 +9,7 @@
 */
 
 
-#include "msg_stuff.h"
+#include "esp_log.h"
 #include "esp_types.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -20,14 +20,16 @@
 #include "sdkconfig.h"
 #include "rotary.h"
 
+#define TAG "Rotary"
+
 //values provided by sdkconfig
 #define PCNT0_PULSE_GPIO	CONFIG_PCNT0_PULSE_GPIO	 // gpio for PCNT0
 #define PCNT0_CONTROL_GPIO      CONFIG_PCNT0_CONTROL_GPIO
-#define ENC0_SW_GPIO            CONFIG_ENC0_SW_GPIO 
+#define ENC0_SW_GPIO            CONFIG_ENC0_SW_GPIO
 
 #define PCNT1_PULSE_GPIO	CONFIG_PCNT1_PULSE_GPIO	 // gpio for PCNT1
 #define PCNT1_CONTROL_GPIO      CONFIG_PCNT1_CONTROL_GPIO
-#define ENC1_SW_GPIO            CONFIG_ENC1_SW_GPIO 
+#define ENC1_SW_GPIO            CONFIG_ENC1_SW_GPIO
 
 //end sdkconfig
 
@@ -65,7 +67,7 @@ pcnt_config_t pcnt_0_config =
     .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
     .counter_h_lim = PCNT0_THRESH1_VAL,
     .counter_l_lim = PCNT0_THRESH0_VAL,
-    
+
 };
 
 gpio_config_t gpio_enc_0_config =
@@ -98,7 +100,7 @@ pcnt_config_t pcnt_1_config =
     .hctrl_mode = PCNT_MODE_REVERSE,       // Keep the primary counter mode if high
     .counter_h_lim = PCNT1_THRESH1_VAL,
     .counter_l_lim = PCNT1_THRESH0_VAL,
-    
+
 };
 
 xQueueHandle pcnt_evt_queues[USED_UNITS];// A queue to handle pulse counter events
@@ -113,9 +115,9 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
     pcnt_evt_t evt;
     portBASE_TYPE HPTaskAwoken = pdFALSE;
 
-    for (i = 0; i < USED_UNITS; i++) 
+    for (i = 0; i < USED_UNITS; i++)
     {
-        if (intr_status & (BIT(i))) 
+        if (intr_status & (BIT(i)))
         {
             evt.unit = i;
             /* Save the PCNT event type that caused an interrupt
@@ -123,7 +125,7 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
             evt.status = PCNT.status_unit[i].val;
             PCNT.int_clr.val = BIT(i);
             xQueueSendFromISR(pcnt_evt_queues[i], &evt, &HPTaskAwoken);
-            if (HPTaskAwoken == pdTRUE) 
+            if (HPTaskAwoken == pdTRUE)
             {
                 portYIELD_FROM_ISR();
             }
@@ -134,37 +136,42 @@ static void IRAM_ATTR quad_enc_isr(void *arg)
 //get the level and enqueue it.
 static void IRAM_ATTR gpio_isr_handler_0(void* arg)
 {
-   gpio_evt_t evt;	
+   gpio_evt_t evt;
    evt.gpio_num = ENC0_SW_GPIO;
    evt.status = gpio_get_level(evt.gpio_num);
    xQueueSendFromISR(gpio_evt_queues[0], &evt, NULL);
-   
+
 }
 
 //get the level and enqueue it.
 static void IRAM_ATTR gpio_isr_handler_1(void* arg)
 {
-   gpio_evt_t evt;	
+   gpio_evt_t evt;
    evt.gpio_num = ENC1_SW_GPIO;
    evt.status = gpio_get_level(evt.gpio_num);
    xQueueSendFromISR(gpio_evt_queues[1], &evt, NULL);
-   
+
 }
 
-static void enc_0_gpio_init(void) 
+static void enc_0_gpio_init(void)
 {
+  esp_err_t err;
+  ESP_LOGI(TAG, "GPIO number for rot0 SWGPIO: %d", ENC0_SW_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot0 CTRL: %d", PCNT0_CONTROL_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot0 PULSE: %d", PCNT0_PULSE_GPIO);
   gpio_config(&gpio_enc_0_config);
-  gpio_install_isr_service(0);
+  ESP_LOGI(TAG, "After rot0 config");
+  err = gpio_install_isr_service(0); //catch error to prevent log output
   gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler_0, NULL);
   gpio_evt_queues[0]  = xQueueCreate(2, sizeof(gpio_evt_t));
 }
 
 
-void encoder_0_counter_init(quad_encoder_mode enc_mode) 
+void encoder_0_counter_init(quad_encoder_mode enc_mode)
 {
     enc_0_gpio_init();
 
-   switch (enc_mode) 
+   switch (enc_mode)
    {
     case QUAD_ENC_MODE_1:
        break;
@@ -195,20 +202,25 @@ void encoder_0_counter_init(quad_encoder_mode enc_mode)
 }
 
 
-void enc_1_gpio_init() 
+void enc_1_gpio_init()
 {
+  esp_err_t err;
+  ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot1 CTRL: %d", PCNT1_CONTROL_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot1 PULSE: %d", PCNT1_PULSE_GPIO);
   gpio_config(&gpio_enc_1_config);
-  gpio_install_isr_service(0);
+  ESP_LOGI(TAG, "After rot1 config");
+  err = gpio_install_isr_service(0); //catch error to prevent logging issues
   gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler_1, NULL);
   gpio_evt_queues[1]  = xQueueCreate(2, sizeof(gpio_evt_t));
 }
 
 
-void encoder_1_counter_init(quad_encoder_mode enc_mode) 
+void encoder_1_counter_init(quad_encoder_mode enc_mode)
 {
     enc_1_gpio_init();
 
-   switch (enc_mode) 
+   switch (enc_mode)
    {
     case QUAD_ENC_MODE_1:
        break;
@@ -234,7 +246,7 @@ void encoder_1_counter_init(quad_encoder_mode enc_mode)
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_UNIT_1);
-   
+
     pcnt_evt_queues[1]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 }
 
@@ -245,14 +257,14 @@ void encoder_1_counter_init(quad_encoder_mode enc_mode)
 static int16_t handle_pcnt(uint8_t max, uint8_t min, int16_t old_count, int16_t count, uint8_t rep_count)
 {
 
-   rep_count = (rep_count == 0) ? 1 : rep_count;	
+   rep_count = (rep_count == 0) ? 1 : rep_count;
 
    if((old_count <= count) && rep_count < max)
    {
 	rep_count+= (count-old_count);
 	rep_count = ((rep_count > max) || (rep_count< min)) ? max : rep_count;
-   } 
-   
+   }
+
    if((old_count > count) && rep_count > min)
    {
         rep_count-=(old_count-count);
@@ -275,7 +287,7 @@ int8_t rotary_0_gpio_val( void )
   res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY );
   ret = (res == pdTRUE) ? evt.status : -1;
 
-return ret;  
+return ret;
 }
 
 //returns the value of the gpio pin that caused the interrupt
@@ -290,7 +302,7 @@ int8_t rotary_1_gpio_val( void )
   res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY );
   ret = (res == pdTRUE) ? evt.status : -1;
 
-return ret;  
+return ret;
 }
 
 //returns the sanitized counter value for the defined max, min boundaries
@@ -315,7 +327,7 @@ int8_t rotary_0_counter_val( void )
    old_count=count;
    pcnt_get_counter_value(evt.unit, &count);
 
-   if (res != pdTRUE) 
+   if (res != pdTRUE)
    {
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
      //MSG("| Reportet counter 0 :%2d |\n", rep_count);
@@ -346,7 +358,7 @@ int8_t rotary_1_counter_val( void )
    old_count=count;
    pcnt_get_counter_value(evt.unit, &count);
 
-   if (res != pdTRUE) 
+   if (res != pdTRUE)
    {
      rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
      //MSG("| Reportet counter 1 :%2d |\n", rep_count);
