@@ -1,0 +1,16 @@
+I2C_CHECK(scl_io_num < 0 ||
+              (GPIO_IS_VALID_OUTPUT_GPIO(scl_io_num)) ||
+              (GPIO_IS_VALID_GPIO(scl_io_num) && mode == I2C_MODE_SLAVE),
+              I2C_SCL_IO_ERR_STR,
+              ESP_ERR_INVALID_ARG);
+              
+              
+scl pin seems to throw an error here.... determine why.
+checkpoint from project code point: 
+              
+bool SSD1306_I2CMasterInitDefault( void )
+              
+              
+ESP_LOGI(TAG, "Used port number: %d", I2CPortNumber);
+ESP_LOGI(TAG, "Config SDAPin: %d", Config.sda_io_num);
+ESP_LOGI(TAG, "Config SCLPin: %d", Config.scl_io_num);
