@@ -167,7 +167,7 @@ static esp_err_t enc_0_gpio_init(void)
   return err;
 }
 
-static void enc_1_gpio_init(void)
+static esp_err_t enc_1_gpio_init(void)
 {
   esp_err_t err = ESP_OK;
   ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
@@ -279,7 +279,7 @@ return rep_count;
 esp_err_t rotary_init(quad_encoder_mode enc_mode)
 {
 
-    eps_err_t err = ESP_OK;
+    esp_err_t err = ESP_OK;
   //there seems to be a bug that prevents multiple calls to the gpio_install_isr_service
     err = gpio_install_isr_service(0);
     if(err != ESP_OK) {return err;}

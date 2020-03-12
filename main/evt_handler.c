@@ -83,6 +83,25 @@ static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 
 
 
+esp_err_t system_init(void)
+{
+  esp_err_t err = ESP_OK;
+
+  err = rotary_init(QUAD_ENC_MODE_1);
+  if(err != ESP_OK){ return err; }
+  // volume handler inits
+  volume_init();
+  tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
+  initVolDisp();
+
+  //input handler inits
+  init_relais();
+  initInpDispl();
+
+  return err;
+}
+
+
 
 
 
@@ -100,10 +119,10 @@ void volume_handler(void *pvParameter)
  //pcnt0 is for volume
  //TODO:additional inits?
 
- encoder_0_counter_init(1);
- volume_init();
- tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
- initVolDisp();
+ //encoder_0_counter_init(1);
+ //volume_init();
+ //tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
+ //initVolDisp();
 
  get_fast_volume(&oldvol);
 
@@ -153,9 +172,9 @@ void volume_handler(void *pvParameter)
 void input_handler(void *pvParameter)
 {
 uint8_t old = 0, tmp = 0, out_change = 0;
-encoder_1_counter_init(1);
-init_relais();
-initInpDispl();
+//encoder_1_counter_init(1);
+//init_relais();
+//initInpDispl();
 
 old = get_active_relais();
 
