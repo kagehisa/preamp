@@ -28,8 +28,14 @@ typedef struct {
 } gpio_evt_t;
 
 //initalises the PCNT with the values needed for handling the rotary encoder
-void encoder_0_counter_init(quad_encoder_mode enc_mode); 
-void encoder_1_counter_init(quad_encoder_mode enc_mode); 
+//void encoder_0_counter_init(quad_encoder_mode enc_mode);
+//void encoder_1_counter_init(quad_encoder_mode enc_mode);
+
+//initialize all used quad encoder modules and the gpio pins for the rotary switch function
+// enc mode: QUAD_ENC_MODE_1 => encoder counts upwards (standard)
+//           QUAD_ENC_MODE_2 => encoder counts downwards
+
+esp_err_t rotary_init(quad_encoder_mode enc_mode);
 
 int8_t rotary_0_counter_val( void );
 int8_t rotary_1_counter_val( void );

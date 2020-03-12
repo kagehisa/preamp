@@ -153,25 +153,38 @@ static void IRAM_ATTR gpio_isr_handler_1(void* arg)
 
 }
 
-static void enc_0_gpio_init(void)
+static esp_err_t enc_0_gpio_init(void)
 {
-  esp_err_t err;
+  esp_err_t err = ESP_OK;
   ESP_LOGI(TAG, "GPIO number for rot0 SWGPIO: %d", ENC0_SW_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot0 CTRL: %d", PCNT0_CONTROL_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot0 PULSE: %d", PCNT0_PULSE_GPIO);
-  gpio_config(&gpio_enc_0_config);
-  ESP_LOGI(TAG, "After rot0 config");
-  err = gpio_install_isr_service(0); //catch error to prevent log output
-  gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler_0, NULL);
+  err = gpio_config(&gpio_enc_0_config);
+  if(err != ESP_OK) {return err;}
+  err = gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler_0, NULL);
+  if(err != ESP_OK) {return err;}
   gpio_evt_queues[0]  = xQueueCreate(2, sizeof(gpio_evt_t));
+  return err;
+}
+
+static void enc_1_gpio_init(void)
+{
+  esp_err_t err = ESP_OK;
+  ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot1 CTRL: %d", PCNT1_CONTROL_GPIO);
+  ESP_LOGI(TAG, "GPIO number for rot1 PULSE: %d", PCNT1_PULSE_GPIO);
+  err = gpio_config(&gpio_enc_1_config);
+  if(err != ESP_OK) {return err;}
+  err = gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler_1, NULL);
+  if(err != ESP_OK) {return err;}
+  gpio_evt_queues[1]  = xQueueCreate(2, sizeof(gpio_evt_t));
+  return err;
 }
 
 
-void encoder_0_counter_init(quad_encoder_mode enc_mode)
+static void encoder_0_counter_init(quad_encoder_mode enc_mode)
 {
-    enc_0_gpio_init();
-
-   switch (enc_mode)
+  switch (enc_mode)
    {
     case QUAD_ENC_MODE_1:
        break;
@@ -202,24 +215,8 @@ void encoder_0_counter_init(quad_encoder_mode enc_mode)
 }
 
 
-void enc_1_gpio_init()
+static void encoder_1_counter_init(quad_encoder_mode enc_mode)
 {
-  esp_err_t err;
-  ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot1 CTRL: %d", PCNT1_CONTROL_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot1 PULSE: %d", PCNT1_PULSE_GPIO);
-  gpio_config(&gpio_enc_1_config);
-  ESP_LOGI(TAG, "After rot1 config");
-  err = gpio_install_isr_service(0); //catch error to prevent logging issues
-  gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler_1, NULL);
-  gpio_evt_queues[1]  = xQueueCreate(2, sizeof(gpio_evt_t));
-}
-
-
-void encoder_1_counter_init(quad_encoder_mode enc_mode)
-{
-    enc_1_gpio_init();
-
    switch (enc_mode)
    {
     case QUAD_ENC_MODE_1:
@@ -272,6 +269,30 @@ static int16_t handle_pcnt(uint8_t max, uint8_t min, int16_t old_count, int16_t 
    }
 
 return rep_count;
+
+}
+
+//initialize all used quad encoder modules and the gpio pins for the rotary switch function
+// enc mode: QUAD_ENC_MODE_1 => encoder counts upwards (standard)
+//           QUAD_ENC_MODE_2 => encoder counts downwards
+
+esp_err_t rotary_init(quad_encoder_mode enc_mode)
+{
+
+    eps_err_t err = ESP_OK;
+  //there seems to be a bug that prevents multiple calls to the gpio_install_isr_service
+    err = gpio_install_isr_service(0);
+    if(err != ESP_OK) {return err;}
+
+    err = enc_0_gpio_init();
+    if(err != ESP_OK) {return err;}
+    err = enc_1_gpio_init();
+    if(err != ESP_OK) {return err;}
+
+    encoder_0_counter_init(enc_mode);
+    encoder_1_counter_init(enc_mode);
+
+    return err;
 
 }
 

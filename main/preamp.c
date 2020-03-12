@@ -71,12 +71,11 @@ void rotary_task_1(void *pvParameter)
 
 void app_main()
 {
-  encoder_0_counter_init(1);
-  encoder_1_counter_init(1);
+    rotary_init(QUAD_ENC_MODE_1);
     //xTaskCreate(&switch_task, "relais_switch_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
-    //xTaskCreate(&rotary_task_0, "rotary_task0", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
-    //xTaskCreate(&rotary_task_1, "rotary_task1", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    xTaskCreate(&rotary_task_0, "rotary_task0", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    xTaskCreate(&rotary_task_1, "rotary_task1", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
 
-    xTaskCreate(&volume_handler, "volume_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
-    xTaskCreate(&input_handler, "input_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    //xTaskCreate(&volume_handler, "volume_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
+    //xTaskCreate(&input_handler, "input_task", configMINIMAL_STACK_SIZE*4, NULL, 5, NULL);
 }
