@@ -20,7 +20,7 @@ This readme is far from complete and also serves as a kind of log for me.
 - Rotary encoder 2 (SW - GPIO25, DT - GPIO26, CLK - GPIO27)
 - Relay Pins (K1 - GPIO23, K2 - GPIO22, K3 - GPIO21, K4 - GPIO19, K5 - GPIO18)
 - I2C port for volume control (CLK - GPIO15, SDL - GPIO2)
-- I2C port for Display propably (CLK - GPIO35, SDL - GPIO34)
+- I2C port for Display propably (CLK - GPIO5, SDL - GPIO4)
 
 
 ### I2C Adresses

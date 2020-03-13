@@ -37,7 +37,7 @@ struct SSD1306_Device InpDisplay;
 
 
 
-static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, const uint8_t I2CAddress, const uint8_t DispWidth, const uint8_t DispHeight, const uint8_t ResetPin)
+static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, const uint8_t I2CAddress, const uint8_t DispWidth, const uint8_t DispHeight, const int16_t ResetPin)
 {
         assert( SSD1306_I2CMasterInitDefault( ) == true );
         assert( SSD1306_I2CMasterAttachDisplayDefault( DisplayHandle, DispWidth, DispHeight, I2CAddress, ResetPin ) == true );

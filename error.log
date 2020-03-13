@@ -1,3 +1,8 @@
+
+changed Display pin (SCL) GPIO35 to GPIO5 
+changed Display pin (SDA) GPIO34 to GPIO4 
+
+---------------------------------------------------------------------------------
 I2C SCL pin seems to be not a valid option 
 
 Used Pins: SCL (volume GPIO15) (Disp GPIO35)
@@ -11,3 +16,5 @@ Used Pins: SCL (volume GPIO15) (Disp GPIO35)
     ESP_LOGI(TAG, "SCL Pin is valid: %d", GPIO_IS_VALID_OUTPUT_GPIO(Config.scl_io_num));
 
 TODO: check manual!
+
+----------------------------------------------------------------------------------
