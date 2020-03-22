@@ -91,7 +91,7 @@ static esp_err_t read_adg(uint8_t adg_addr, uint8_t* data)
  */
 static esp_err_t write_adg(uint8_t adg_addr, uint8_t data)
 {
-    i2c_port_t i2c_num = I2C_MASTER_NUM;	
+    i2c_port_t i2c_num = I2C_MASTER_NUM;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, ( adg_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
@@ -107,7 +107,7 @@ esp_err_t set_volume(uint8_t vol)
 {
   esp_err_t ret;
   uint8_t i;
-  
+
   if((vol > MAX_VOL || vol < MIN_VOL) && vol != MUTE_VOL )
   {
    return 0x102; //volume out of bound
@@ -116,7 +116,7 @@ esp_err_t set_volume(uint8_t vol)
     uint32_t shift_op = (vol == 0) ? 0 : 1; //mute case
 
 
-  
+
     adg_registers.volume = (shift_op<<shift);
 
     for(i=0;i<UX_NUM; i++)
@@ -133,9 +133,9 @@ esp_err_t set_volume(uint8_t vol)
 esp_err_t get_fast_volume(uint8_t *vol)
 {
   esp_err_t ret = ESP_OK;
-  uint8_t i; 
+  uint8_t i;
   uint32_t tmp;
-  
+
   i=0;
   tmp = adg_registers.volume;
 
@@ -144,18 +144,18 @@ esp_err_t get_fast_volume(uint8_t *vol)
    tmp = (tmp >> 1);
    i++;
   }while(tmp > 0);
-  
+
   *vol = tmp;
-  
+
   return ret;
 }
 
 esp_err_t get_volume(uint8_t *vol)
 {
   esp_err_t ret;
-  uint8_t i; 
+  uint8_t i;
   uint32_t tmp;
-  
+
   for(i=0;i<UX_NUM; i++)
   {
     ret = read_adg(ux_addr[i], adg_registers.regs+i);
@@ -170,9 +170,9 @@ esp_err_t get_volume(uint8_t *vol)
    tmp = (tmp >> 1);
    i++;
   }while(tmp > 0);
-  
+
   *vol = tmp;
-  
+
   return ret;
 }
 
@@ -199,7 +199,7 @@ static esp_err_t init_vol_state( void )
   esp_err_t ret = ESP_OK;
 
   ret = init_nv();
-  
+
   if(ret == ESP_OK)
   {
    ret = open_nv(&volume_handle);
@@ -209,7 +209,7 @@ static esp_err_t init_vol_state( void )
     ret = read_blob_nv(volume_handle, (&adg_registers)->regs, REG_NUM, vol_key );
 
     if(ret != ESP_OK) //there is no entry yet
-    {    
+    {
      ret = write_blob_nv(volume_handle, (&adg_registers)->regs, REG_NUM, vol_key);
     }
    }
@@ -220,25 +220,27 @@ static esp_err_t init_vol_state( void )
 
 /**
  * module initialization
- */ 
+ */
 void volume_init( void )
 {
    esp_err_t ret = ESP_OK;
    uint8_t i;
 
-   i2c_init();
-
+   /*
+   TEST removal: i2c_init();
+   */
    //read current register configuration
    //from adg, else muting.
+/*TEST removal
    for(i=0; i<UX_NUM; i++)
    {
     ret = read_adg(ux_addr[i], adg_registers.regs+i);
     if(ret != ESP_OK){ adg_registers.regs[i] = 0; }
-   }    
-
+   }
+*/
    //load latest persistent value or write one inital
    ret = init_vol_state();
-   
+
 }
 
 /* write the current volume setting to the nvs
@@ -252,6 +254,3 @@ esp_err_t pers_volume( void )
 
   return ret;
 }
-
-
-

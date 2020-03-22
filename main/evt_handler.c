@@ -116,14 +116,6 @@ void volume_handler(void *pvParameter)
  uint8_t evt;
  esp_err_t err;
 
- //pcnt0 is for volume
- //TODO:additional inits?
-
- //encoder_0_counter_init(1);
- //volume_init();
- //tg0_timer_init(TIMER_0, TIMER_INTERVAL0_SEC);
- //initVolDisp();
-
  get_fast_volume(&oldvol);
 
  while(1)
@@ -136,12 +128,11 @@ void volume_handler(void *pvParameter)
     volDispWrite(tmp);
     oldvol = tmp;
     vol_change = 1;
-    //loopcnt = 0;
+
   }
 
   if(rotary_0_gpio_val() == 1)//button pressed mute it is...
   {
-   //loopcnt = 0;
    if(mute == 0)
    {
      err = get_volume(&mutesave);
@@ -172,9 +163,6 @@ void volume_handler(void *pvParameter)
 void input_handler(void *pvParameter)
 {
 uint8_t old = 0, tmp = 0, out_change = 0;
-//encoder_1_counter_init(1);
-//init_relais();
-//initInpDispl();
 
 old = get_active_relais();
 

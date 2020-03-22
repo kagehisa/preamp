@@ -35,11 +35,15 @@
 struct SSD1306_Device VolDisplay;
 struct SSD1306_Device InpDisplay;
 
-
+static uint8_t once = 0;
 
 static esp_err_t DefaultBusInit( struct SSD1306_Device* DisplayHandle, const uint8_t I2CAddress, const uint8_t DispWidth, const uint8_t DispHeight, const int16_t ResetPin)
 {
-        assert( SSD1306_I2CMasterInitDefault( ) == true );
+        if(once == 0)
+        {
+          assert( SSD1306_I2CMasterInitDefault( ) == true );
+          once = 1;
+        }
         assert( SSD1306_I2CMasterAttachDisplayDefault( DisplayHandle, DispWidth, DispHeight, I2CAddress, ResetPin ) == true );
 
     return ESP_OK;
