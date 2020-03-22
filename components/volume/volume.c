@@ -105,7 +105,7 @@ static esp_err_t write_adg(uint8_t adg_addr, uint8_t data)
 
 esp_err_t set_volume(uint8_t vol)
 {
-  esp_err_t ret;
+  esp_err_t ret = ESP_OK;
   uint8_t i;
 
   if((vol > MAX_VOL || vol < MIN_VOL) && vol != MUTE_VOL )
@@ -121,7 +121,9 @@ esp_err_t set_volume(uint8_t vol)
 
     for(i=0;i<UX_NUM; i++)
     {
+     /*TEST stubbed out the I2C call
      ret = write_adg(ux_addr[i], adg_registers.regs[i]);
+     */
      if (ret != ESP_OK){ return ret;  }
     }
 
@@ -152,13 +154,15 @@ esp_err_t get_fast_volume(uint8_t *vol)
 
 esp_err_t get_volume(uint8_t *vol)
 {
-  esp_err_t ret;
+  esp_err_t ret = ESP_OK;
   uint8_t i;
   uint32_t tmp;
 
   for(i=0;i<UX_NUM; i++)
   {
+    /*TEST remove later
     ret = read_adg(ux_addr[i], adg_registers.regs+i);
+    */
     if (ret != ESP_OK){ return ret;  }
   }
 

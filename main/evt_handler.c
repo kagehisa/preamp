@@ -149,7 +149,7 @@ void volume_handler(void *pvParameter)
   }//end of mute
 
   // may decrease the queue waiting time.. TODO: adapting...
-  if(xQueueReceive( timer_queue, &evt, (1000 / portTICK_PERIOD_MS) ) == pdTRUE)
+  if(xQueueReceive( timer_queue, &evt, (500 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     pers_volume();
     vol_change = 0;
