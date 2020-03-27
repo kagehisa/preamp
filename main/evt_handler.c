@@ -98,6 +98,12 @@ esp_err_t system_init(void)
   init_relais();
   initInpDispl();
 
+  timer_queue = xQueueCreate( 2, sizeof( uint8_t * ) );
+   if( timer_queue == 0 )
+   {
+       err = ESP_FAIL;
+   }
+
   return err;
 }
 
@@ -149,7 +155,7 @@ void volume_handler(void *pvParameter)
   }//end of mute
 
   // may decrease the queue waiting time.. TODO: adapting...
-  if(xQueueReceive( timer_queue, &evt, (500 / portTICK_PERIOD_MS) ) == pdTRUE)
+  if(xQueueReceive( timer_queue, &evt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     pers_volume();
     vol_change = 0;
@@ -189,7 +195,5 @@ old = get_active_relais();
 		out_change = 0;
 		old=tmp;
 	}
-
-//pcnt1 is the output chooser
  }
 }
