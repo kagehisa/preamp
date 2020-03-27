@@ -16,7 +16,7 @@ This readme is far from complete and also serves as a kind of log for me.
 ## Hardware information
 
 ### Pinout
-- Rotary encoder 1 (SW - GPIO13, DT - GPIO14, CLK - GPIO12)
+- Rotary encoder 1 (SW - GPIO13, DT - GPIO14, CLK - GPIO34)
 - Rotary encoder 2 (SW - GPIO25, DT - GPIO26, CLK - GPIO27)
 - Relay Pins (K1 - GPIO23, K2 - GPIO22, K3 - GPIO21, K4 - GPIO19, K5 - GPIO18)
 - I2C port for volume control (CLK - GPIO15, SDL - GPIO2)
