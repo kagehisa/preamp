@@ -1,8 +1,0 @@
-menu "MSG ouput disable"
-
-config MSG_SILENT
-    bool "Disable printf based Message ouput"
-    default 0
-    help
-		Disable MSG output for the target <make monitor>
-endmenu

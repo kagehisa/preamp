@@ -5,7 +5,7 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include "msg_stuff.h"
+#include "esp_log.h"
 #include "nv_acc.h"
 #include "driver/i2c.h"
 #include "sdkconfig.h"
@@ -38,6 +38,8 @@
 #define MIN_VOL          	CONFIG_MIN_VOL_STEPS        /*smallest volume step */
 #define MUTE_VOL         	CONFIG_MUTE_VOL_STEP        /*mute (almost) */
 // end sdkconfig
+
+#define TAG "Volume"
 
 typedef union
   {

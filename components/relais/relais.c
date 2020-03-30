@@ -7,7 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include "driver/gpio.h"
-#include "msg_stuff.h"
+#include "esp_log.h"
 #include "nv_acc.h"
 #include "sdkconfig.h"
 #include "relais.h"
@@ -20,11 +20,12 @@
 #define RELAIS_GPIO_5 CONFIG_RELAIS_GPIO_5
 //end sdkconfig
 
+#define TAG "Relais"
 
 /* Structure that represents the state of the relais and the corresponding GPIO pins  */
-relais_state relais = { 
+relais_state relais = {
 	{ RELAIS_GPIO_1, RELAIS_GPIO_2, RELAIS_GPIO_3, RELAIS_GPIO_4, RELAIS_GPIO_5 },
-	{ STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF } 
+	{ STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF, STATE_OFF }
       };
 
 /* handle for the nvm access  */
@@ -46,7 +47,7 @@ static esp_err_t init_relais_state( void )
     ret = open_nv(&relais_handle);
 
     if(ret == ESP_OK)
-    { 
+    {
 	ret = read_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
         if(ret != ESP_OK) //assuming the entry does noty exist yet
         {
@@ -64,7 +65,7 @@ static uint8_t get_gpio_by_index(uint8_t index)
      esp_err_t ret;
      ret = (index < RELAIS_NUM) ? (&relais)->relais[index] : REL_ERR;
 
-     return ret;	
+     return ret;
 }
 
 
@@ -73,7 +74,7 @@ static uint8_t get_state_by_index(uint8_t index)
      uint8_t ret;
      ret = (index < RELAIS_NUM) ? (&relais)->state[index] : REL_ERR;
 
-     return ret;	
+     return ret;
 }
 
 static uint8_t active_relais_count( void )
@@ -93,25 +94,25 @@ static uint8_t active_relais_count( void )
 esp_err_t init_relais( void )
 {
 /* Initialises the relays with the last state stored in nvram or
- * if no nv value is available with a clear all off state 
+ * if no nv value is available with a clear all off state
  * */
 
-   esp_err_t ret; 
+   esp_err_t ret;
    uint8_t active=0;
 
    ret = init_relais_state();
-   MSG("debug msg init func; ret = %i \n", ret);
+   ESP_LOGI(TAG, "debug msg init func; ret = %i \n", ret);
    if(ret == ESP_OK)
    {
      active = get_active_relais();
-	MSG("active = %i \n", active);     
+	ESP_LOGI(TAG, "active = %i \n", active);
      if(active != 0)
      {
-	MSG("switching on %i \n", active);     
+	ESP_LOGI(TAG, "switching on %i \n", active);
       switch_relais_on(active);
      }else{
       switch_relais_off(OUTPUT_OFF);
-	MSG("switching off %i \n", active);     
+	ESP_LOGI(TAG, "switching off %i \n", active);     
      }
    }
  return ret;
@@ -122,7 +123,7 @@ esp_err_t switch_relais_on(uint8_t relais_num)
 
 /* Sets the GPIO that controls the apropriate relais high.
  * Returns the level that has been set.
- * relais_num is a number from 1 to NUM_RELAIS 
+ * relais_num is a number from 1 to NUM_RELAIS
  * */
   if(active_relais_count() == 0 || relais_num == get_active_relais())
   {
@@ -130,7 +131,7 @@ esp_err_t switch_relais_on(uint8_t relais_num)
      esp_err_t ret;
 
      gpio_num = get_gpio_by_index(relais_num-1);
-   
+
      gpio_pad_select_gpio(gpio_num);
      gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
      gpio_set_level(gpio_num, 1);
@@ -140,7 +141,7 @@ esp_err_t switch_relais_on(uint8_t relais_num)
      ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
 
     return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
- 
+
   }
 
   return ESP_ERR_INVALID_STATE; // more than on active relais and desired active relais != current active one....
@@ -158,7 +159,7 @@ esp_err_t switch_relais_off(uint8_t relais_num)
 
     uint8_t gpio_num;
     esp_err_t ret;
-    
+
     gpio_num = (relais_num != OUTPUT_OFF) ? get_gpio_by_index(relais_num-1) : get_active_relais();
 
     //todo: if rel num = 0 skip the last part
@@ -169,10 +170,10 @@ esp_err_t switch_relais_off(uint8_t relais_num)
        gpio_set_level(gpio_num, 0);
 
        (&relais)->state[relais_num-1] = STATE_OFF;
-    
+
        ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
        return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
-     
+
     }
  return ESP_ERR_INVALID_ARG;
 }
@@ -194,5 +195,3 @@ uint8_t get_active_relais(void)
    }
   return 0;
 }
-
-
