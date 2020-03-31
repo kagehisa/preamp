@@ -9,12 +9,7 @@
 #ifndef EVT_HANDLER_H
 #define EVT_HANDLER_H
 
-#include "esp_err.h"
+void rotary_handler(void *pvParameter);
 
-esp_err_t system_init(void);
-
-void volume_handler(void *pvParameter);
-
-void input_handler(void *pvParameter);
 
 #endif /* MSG_STUFF_H */

@@ -104,15 +104,15 @@ esp_err_t init_relais( void )
    ESP_LOGI(TAG, "debug msg init func; ret = %i \n", ret);
    if(ret == ESP_OK)
    {
-     active = get_active_relais();
-	ESP_LOGI(TAG, "active = %i \n", active);
+     ret = get_active_relais(&active);
+		 ESP_LOGI(TAG, "active = %i \n", active);
      if(active != 0)
      {
-	ESP_LOGI(TAG, "switching on %i \n", active);
-      switch_relais_on(active);
+			 ESP_LOGI(TAG, "switching on %i \n", active);
+       ret = switch_relais_on(active);
      }else{
-      switch_relais_off(OUTPUT_OFF);
-	ESP_LOGI(TAG, "switching off %i \n", active);
+      ret = switch_relais_off(OUTPUT_OFF);
+			ESP_LOGI(TAG, "switching off %i \n", active);
      }
    }
  return ret;
@@ -120,16 +120,18 @@ esp_err_t init_relais( void )
 
 esp_err_t switch_relais_on(uint8_t relais_num)
 {
-
 /* Sets the GPIO that controls the apropriate relais high.
  * Returns the level that has been set.
  * relais_num is a number from 1 to NUM_RELAIS
  * */
-  if(active_relais_count() == 0 || relais_num == get_active_relais())
-  {
-     uint8_t gpio_num;
-     esp_err_t ret;
 
+ esp_err_t ret;
+ uint8_t active=0;
+ uint8_t gpio_num;
+
+  ret = get_active_relais(&active);
+  if(active_relais_count() == 0 || relais_num == active)
+  {
      gpio_num = get_gpio_by_index(relais_num-1);
 
      gpio_pad_select_gpio(gpio_num);
@@ -157,12 +159,13 @@ esp_err_t switch_relais_off(uint8_t relais_num)
  * relais_num is a number between 1 and NUM_RELAIS or OUTPUT_OFF
  * */
 
-    uint8_t gpio_num;
+    uint8_t gpio_num, active = 0;
     esp_err_t ret;
 
-    gpio_num = (relais_num != OUTPUT_OFF) ? get_gpio_by_index(relais_num-1) : get_active_relais();
+		ret = get_active_relais(&active);
 
-    //todo: if rel num = 0 skip the last part
+    gpio_num = (relais_num != OUTPUT_OFF) ? get_gpio_by_index(relais_num-1) : active;
+
     if(gpio_num != 0)
     {
        gpio_pad_select_gpio(gpio_num);

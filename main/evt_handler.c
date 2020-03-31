@@ -13,6 +13,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "esp_log.h"
 #include "display.h"
 
 #include "evt_handler.h"
@@ -26,12 +27,16 @@
 #define TEST_WITH_RELOAD 1 // testing will be done with auto reload
 
 
-
+#define TAG "EvtHandler"
 
 
 static uint8_t vol_change;
 xQueueHandle timer_queue;
 
+
+/* Timer ISR to generate a event and enqueue it.
+This Event is used as a signal to persist the
+volume value in nv ram */
 void IRAM_ATTR timer_group0_isr(void *para)
 {
   int timer_idx = (int) para;
@@ -56,6 +61,7 @@ void IRAM_ATTR timer_group0_isr(void *para)
   TIMERG0.hw_timer[timer_idx].config.alarm_en = TIMER_ALARM_EN;
 }
 
+/* Initialize the Timer with the above defined ISR */
 static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 {
   /* Select and initialize basic parameters of the timer */
@@ -82,7 +88,7 @@ static void tg0_timer_init(int timer_idx, double timer_interval_sec)
 
 
 
-esp_err_t system_init(void)
+static esp_err_t system_init(void)
 {
   esp_err_t err = ESP_OK;
 
@@ -114,7 +120,7 @@ esp_err_t system_init(void)
  * This function is intended to be run as a Task
  * */
 
-void volume_handler(void *pvParameter)
+void rotary_handler(void *pvParameter)
 {
  uint8_t oldVol = 0, tmpVol = 0;
  uint8_t mute = 0, mutesave = 0;
@@ -122,17 +128,23 @@ void volume_handler(void *pvParameter)
  uint8_t oldIn = 0, tmpIn = 0, changeIn = 0;
  esp_err_t err;
 
+ if ( system_init() == ESP_OK )
+ {
+   ESP_LOGI(TAG, "System Init successfull!");
+ }
+
  get_fast_volume(&oldVol);
  get_active_relais(&oldIn);
 
  while(1)
  {
 /*------------------------------------Input-----------------------------------*/
-  rotary_1_counter_val(&tmpIn);
+  err = rotary_1_counter_val(&tmpIn);
 
-  if(tmpIn != oldIn)
+  if(err == ESP_OK && tmpIn != oldIn)
   {
-    oldIn = (changeIn == 0) ? tmpIn : oldIn; //remeber the first old value to switch it off
+    //remeber the first old value to switch it off
+    oldIn = (changeIn == 0) ? tmpIn : oldIn;
 
     //no output change yet, since writing output also writes nv ram
     //update display already, when writing relais persist display as well
@@ -142,8 +154,10 @@ void volume_handler(void *pvParameter)
   }
 
   //switch on selected input
-  rotary_1_gpio_val(&gpio_val);
-  if( gpio_val == 1 && changeIn == 1) //button was pressed so we switch the selected output on
+  err = rotary_1_gpio_val(&gpio_val);
+
+  //button was pressed so we switch the selected output on
+  if( err == ESP_OK && gpio_val == 1 && changeIn == 1)
   {
     switch_relais_off(oldIn);
     inpDispWrite(tmpIn);
@@ -154,9 +168,9 @@ void volume_handler(void *pvParameter)
 
 /*--------------------------------volume--------------------------------------*/
 
-  rotary_0_counter_val(&tmpVol);
+  err = rotary_0_counter_val(&tmpVol);
 
-  if(tmpVol != oldVol)
+  if(err == ESP_OK && tmpVol != oldVol)
   {
     set_volume(tmpVol);
     volDispWrite(tmpVol);
@@ -165,8 +179,9 @@ void volume_handler(void *pvParameter)
   }
 
   //mute case
-  rotary_0_gpio_val(&gpio_val);
-  if(gpio_val == 1)//button pressed mute it is...
+  err = rotary_0_gpio_val(&gpio_val);
+
+  if(err == ESP_OK && gpio_val == 1)//button pressed mute it is...
   {
    if(mute == 0)
    {
@@ -183,8 +198,8 @@ void volume_handler(void *pvParameter)
 
   }//end of mute
 
-  // may decrease the queue waiting time.. TODO: adapting...
-  if(xQueueReceive( timer_queue, &evt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
+  // may fiddle with the queue waiting time..
+  if(xQueueReceive( timer_queue, &volEvt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     pers_volume();
     vol_change = 0;

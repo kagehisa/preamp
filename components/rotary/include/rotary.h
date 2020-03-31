@@ -37,10 +37,10 @@ typedef struct {
 
 esp_err_t rotary_init( quad_encoder_mode );
 
-esp_err_t rotary_0_counter_val( uint8_t* )
-esp_err_t rotary_1_counter_val( uint8_t* )
+esp_err_t rotary_0_counter_val( uint8_t *value );
+esp_err_t rotary_1_counter_val( uint8_t *value );
 
-esp_err_t rotary_0_gpio_val( uint8_t* )
-esp_err_t rotary_1_gpio_val( uint8_t* )
+esp_err_t rotary_0_gpio_val( uint8_t *val );
+esp_err_t rotary_1_gpio_val( uint8_t *val );
 
 #endif /* ROTARY_H */

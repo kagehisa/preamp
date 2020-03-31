@@ -108,28 +108,45 @@ xQueueHandle gpio_evt_queues[USED_UNITS];// A queue to handle pulse counter even
 
 
 
-static void IRAM_ATTR quad_enc_isr(void *arg)
+static void IRAM_ATTR quad_enc_0_isr(void *arg)
 {
     uint32_t intr_status = PCNT.int_st.val;
-    uint8_t i = 0;
     pcnt_evt_t evt;
     portBASE_TYPE HPTaskAwoken = pdFALSE;
 
-    for (i = 0; i < USED_UNITS; i++)
+    if (intr_status & (BIT(0)))
     {
-        if (intr_status & (BIT(i)))
-        {
-            evt.unit = i;
-            /* Save the PCNT event type that caused an interrupt
-               to pass it to the main program */
-            evt.status = PCNT.status_unit[i].val;
-            PCNT.int_clr.val = BIT(i);
-            xQueueSendFromISR(pcnt_evt_queues[i], &evt, &HPTaskAwoken);
-            if (HPTaskAwoken == pdTRUE)
-            {
-                portYIELD_FROM_ISR();
-            }
-        }
+      evt.unit = 0;
+      /* Save the PCNT event type that caused an interrupt
+         to pass it to the main program */
+      evt.status = PCNT.status_unit[0].val;
+      PCNT.int_clr.val = BIT(0);
+      xQueueSendFromISR(pcnt_evt_queues[0], &evt, &HPTaskAwoken);
+      if (HPTaskAwoken == pdTRUE)
+      {
+        portYIELD_FROM_ISR();
+      }
+    }
+}
+
+static void IRAM_ATTR quad_enc_1_isr(void *arg)
+{
+    uint32_t intr_status = PCNT.int_st.val;
+    pcnt_evt_t evt;
+    portBASE_TYPE HPTaskAwoken = pdFALSE;
+
+    if (intr_status & (BIT(1)))
+    {
+      evt.unit = 1;
+      /* Save the PCNT event type that caused an interrupt
+      to pass it to the main program */
+      evt.status = PCNT.status_unit[1].val;
+      PCNT.int_clr.val = BIT(1);
+      xQueueSendFromISR(pcnt_evt_queues[1], &evt, &HPTaskAwoken);
+      if (HPTaskAwoken == pdTRUE)
+      {
+        portYIELD_FROM_ISR();
+      }
     }
 }
 
@@ -205,13 +222,13 @@ static void encoder_0_counter_init(quad_encoder_mode enc_mode)
     pcnt_counter_clear(PCNT_UNIT_0);
 
     /* Register ISR handler and enable interrupts for PCNT unit */
-    pcnt_isr_register(quad_enc_isr, NULL, 0, NULL);
+    pcnt_isr_register(quad_enc_0_isr, NULL, 0, NULL);
     pcnt_intr_enable(PCNT_UNIT_0);
+
+    pcnt_evt_queues[0]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_UNIT_0);
-
-   pcnt_evt_queues[0]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 }
 
 
@@ -238,13 +255,15 @@ static void encoder_1_counter_init(quad_encoder_mode enc_mode)
     pcnt_counter_clear(PCNT_UNIT_1);
 
     /* Register ISR handler and enable interrupts for PCNT unit */
-    pcnt_isr_register(quad_enc_isr, NULL, 0, NULL);
+    pcnt_isr_register(quad_enc_1_isr, NULL, 0, NULL);
     pcnt_intr_enable(PCNT_UNIT_1);
+
+    pcnt_evt_queues[1]  = xQueueCreate(10, sizeof(pcnt_evt_t));
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_UNIT_1);
 
-    pcnt_evt_queues[1]  = xQueueCreate(10, sizeof(pcnt_evt_t));
+
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -353,16 +372,18 @@ esp_err_t rotary_0_counter_val( uint8_t *value )
     */
    res = xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY);
 
-   old_count=count;
-   pcnt_get_counter_value(evt.unit, &count);
-
-   if (res != pdTRUE)
+   if (res == pdTRUE)
    {
+     old_count=count;
+     pcnt_get_counter_value(evt.unit, &count);
+     ret = ESP_OK;
+   }
+
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
      //MSG("| Reportet counter 0 :%2d |\n", rep_count);
      *value = rep_count;
-     ret = ESP_OK;
-   }
+
+
   return ret;
 }
 
@@ -373,7 +394,7 @@ esp_err_t rotary_1_counter_val( uint8_t *value )
 {
 
    static int16_t count = 0;
-   int16_t old_count  = 0;
+   static int16_t old_count  = 0;
    static uint8_t rep_count = 0;
 
    static pcnt_evt_t evt;
@@ -385,15 +406,17 @@ esp_err_t rotary_1_counter_val( uint8_t *value )
     */
    res = xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY);
 
-   old_count=count;
-   pcnt_get_counter_value(evt.unit, &count);
-
-   if (res != pdTRUE)
+   if (res == pdTRUE)
    {
-     rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
-     //MSG("| Reportet counter 1 :%2d |\n", rep_count);
-     *value = rep_count;
+     old_count=count;
+     pcnt_get_counter_value(evt.unit, &count);
      ret = ESP_OK;
    }
+
+  rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
+  //MSG("| Reportet counter 1 :%2d |\n", rep_count);
+  *value = rep_count;
+
+
  return ret;
 }
