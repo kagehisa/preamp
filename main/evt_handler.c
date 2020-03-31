@@ -180,8 +180,8 @@ void rotary_handler(void *pvParameter)
 
   //mute case
   err = rotary_0_gpio_val(&gpio_val);
-
-  if(err == ESP_OK && gpio_val == 1)//button pressed mute it is...
+  //button pressed: mute (mute = 0) or unmute (mute = 1)
+  if(err == ESP_OK && gpio_val == 1)
   {
    if(mute == 0)
    {
