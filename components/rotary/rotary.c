@@ -321,11 +321,9 @@ esp_err_t rotary_init(quad_encoder_mode enc_mode)
 esp_err_t rotary_0_gpio_val( uint8_t *val )
 {
   esp_err_t ret = ESP_FAIL;
-  portBASE_TYPE res;
   gpio_evt_t evt;
 
-  res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY );
-  if(res == pdTRUE)
+  if(xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY) == pdTRUE)
   {
     *val = evt.status;
     ret = ESP_OK;
@@ -340,11 +338,9 @@ return ret;
 esp_err_t rotary_1_gpio_val( uint8_t *val )
 {
   esp_err_t ret = ESP_FAIL;
-  portBASE_TYPE res;
   gpio_evt_t evt;
 
-  res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY );
-  if(res == pdTRUE)
+  if(xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY) == pdTRUE)
   {
     *val = evt.status;
     ret = ESP_OK;
@@ -362,28 +358,23 @@ esp_err_t rotary_0_counter_val( uint8_t *value )
    static int16_t count = 0;
    static int16_t old_count  = 0;
    static uint8_t rep_count = 0;
-
    static pcnt_evt_t evt;
 
-   portBASE_TYPE res;
    esp_err_t ret = ESP_FAIL;
+
    /* Wait for the event information passed from PCNT's interrupt handler.
     * Once received, decode the event type and print it on the serial monitor.
     */
-   res = xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY);
-
-   if (res == pdTRUE)
+   if (xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY) == pdTRUE)
    {
      old_count=count;
      pcnt_get_counter_value(evt.unit, &count);
-     ret = ESP_OK;
-   }
-
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
-     //MSG("| Reportet counter 0 :%2d |\n", rep_count);
+     ESP_LOGI(TAG, "Reportet counter0 :%2d ", rep_count);
      *value = rep_count;
 
-
+     ret = ESP_OK;
+   }
   return ret;
 }
 
@@ -396,27 +387,22 @@ esp_err_t rotary_1_counter_val( uint8_t *value )
    static int16_t count = 0;
    static int16_t old_count  = 0;
    static uint8_t rep_count = 0;
-
    static pcnt_evt_t evt;
-
-   portBASE_TYPE res;
+   
    esp_err_t ret = ESP_FAIL;
+
    /* Wait for the event information passed from PCNT's interrupt handler.
     * Once received, decode the event type and print it on the serial monitor.
     */
-   res = xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY);
-
-   if (res == pdTRUE)
+   if (xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY) == pdTRUE)
    {
      old_count=count;
      pcnt_get_counter_value(evt.unit, &count);
+     rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
+     ESP_LOGI(TAG, "Reportet counter1 :%2d ", rep_count);
+     *value = rep_count;
+
      ret = ESP_OK;
    }
-
-  rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
-  //MSG("| Reportet counter 1 :%2d |\n", rep_count);
-  *value = rep_count;
-
-
  return ret;
 }

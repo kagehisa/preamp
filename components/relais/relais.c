@@ -48,11 +48,11 @@ static esp_err_t init_relais_state( void )
 
     if(ret == ESP_OK)
     {
-	ret = read_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-        if(ret != ESP_OK) //assuming the entry does noty exist yet
-        {
-          ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-        }
+			ret = read_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
+      if(ret != ESP_OK) //assuming the entry does noty exist yet
+      {
+        ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
+      }
     }
    }
 
@@ -121,7 +121,6 @@ esp_err_t init_relais( void )
 esp_err_t switch_relais_on(uint8_t relais_num)
 {
 /* Sets the GPIO that controls the apropriate relais high.
- * Returns the level that has been set.
  * relais_num is a number from 1 to NUM_RELAIS
  * */
 
@@ -139,15 +138,13 @@ esp_err_t switch_relais_on(uint8_t relais_num)
      gpio_set_level(gpio_num, 1);
 
      (&relais)->state[relais_num-1] = STATE_ON;
-
+		 ESP_LOGI(TAG, "switching on %i \n", gpio_num);
      ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
 
-    return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
-
+    return ret;
   }
-
-  return ESP_ERR_INVALID_STATE; // more than on active relais and desired active relais != current active one....
-
+  // more than on active relais and desired active relais != current active one....
+  return ESP_ERR_INVALID_STATE;
 }
 
 
@@ -155,7 +152,6 @@ esp_err_t switch_relais_off(uint8_t relais_num)
 {
 
 /* Sets the GPIO that controls the apropriate relais high.
- * Returns the level that has been set.
  * relais_num is a number between 1 and NUM_RELAIS or OUTPUT_OFF
  * */
 
@@ -173,10 +169,9 @@ esp_err_t switch_relais_off(uint8_t relais_num)
        gpio_set_level(gpio_num, 0);
 
        (&relais)->state[relais_num-1] = STATE_OFF;
-
+			 ESP_LOGI(TAG, "switching off %i \n", gpio_num);
        ret = write_blob_nv(relais_handle, (&relais)->state, RELAIS_NUM, rel_key);
-       return ( (ret == ESP_OK) ? get_state_by_index(relais_num-1) : ret );
-
+       return ret;
     }
  return ESP_ERR_INVALID_ARG;
 }
