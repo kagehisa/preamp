@@ -112,7 +112,7 @@ esp_err_t init_relais( void )
       switch_relais_on(active);
      }else{
       switch_relais_off(OUTPUT_OFF);
-	ESP_LOGI(TAG, "switching off %i \n", active);     
+	ESP_LOGI(TAG, "switching off %i \n", active);
      }
    }
  return ret;
@@ -178,20 +178,20 @@ esp_err_t switch_relais_off(uint8_t relais_num)
  return ESP_ERR_INVALID_ARG;
 }
 
-uint8_t get_active_relais(void)
+esp_err_t get_active_relais(uint8_t *active)
 {
 /* This function returns the number of the current active relais.
  * Returns 0 if none is active
  * */
-
+   esp_err_t ret = ESP_OK;
    uint8_t i;
 
    for(i=0; i<RELAIS_NUM; i++)
    {
     if(get_state_by_index(i) == STATE_ON)
     {
-      return i+1;
+      *active = i+1;
     }
    }
-  return 0;
+  return ret;
 }

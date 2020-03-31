@@ -17,11 +17,11 @@
 
 #include "evt_handler.h"
 
-
+/* TIMER_BASE_CLK defined in timer.h */
 
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
-#define TIMER_INTERVAL0_SEC   (3) // sample test interval for the first timer
+#define TIMER_INTERVAL0_SEC   (10) // sample test interval for the first timer
 #define TEST_WITHOUT_RELOAD   0        // testing will be done without auto reload
 #define TEST_WITH_RELOAD 1 // testing will be done with auto reload
 
@@ -40,7 +40,6 @@ void IRAM_ATTR timer_group0_isr(void *para)
   uint32_t intr_status = TIMERG0.int_st_timers.val;
 
   TIMERG0.hw_timer[timer_idx].update = 1;
-
 
   if(vol_change == 1)
   {
@@ -117,27 +116,57 @@ esp_err_t system_init(void)
 
 void volume_handler(void *pvParameter)
 {
- uint8_t oldvol = 0, tmp = 0;
+ uint8_t oldVol = 0, tmpVol = 0;
  uint8_t mute = 0, mutesave = 0;
- uint8_t evt;
+ uint8_t volEvt, gpio_val;
+ uint8_t oldIn = 0, tmpIn = 0, changeIn = 0;
  esp_err_t err;
 
- get_fast_volume(&oldvol);
+ get_fast_volume(&oldVol);
+ get_active_relais(&oldIn);
 
  while(1)
  {
-  tmp = rotary_0_counter_val();
+/*------------------------------------Input-----------------------------------*/
+  rotary_1_counter_val(&tmpIn);
 
-  if(tmp != oldvol)
+  if(tmpIn != oldIn)
   {
-    set_volume(tmp);
-    volDispWrite(tmp);
-    oldvol = tmp;
-    vol_change = 1;
+    oldIn = (changeIn == 0) ? tmpIn : oldIn; //remeber the first old value to switch it off
 
+    //no output change yet, since writing output also writes nv ram
+    //update display already, when writing relais persist display as well
+    //relay writing on button press
+    inpDispWrite(tmpIn);
+    changeIn = 1;
   }
 
-  if(rotary_0_gpio_val() == 1)//button pressed mute it is...
+  //switch on selected input
+  rotary_1_gpio_val(&gpio_val);
+  if( gpio_val == 1 && changeIn == 1) //button was pressed so we switch the selected output on
+  {
+    switch_relais_off(oldIn);
+    inpDispWrite(tmpIn);
+    switch_relais_on(tmpIn);
+    changeIn = 0;
+    oldIn = tmpIn;
+  }
+
+/*--------------------------------volume--------------------------------------*/
+
+  rotary_0_counter_val(&tmpVol);
+
+  if(tmpVol != oldVol)
+  {
+    set_volume(tmpVol);
+    volDispWrite(tmpVol);
+    oldVol = tmpVol;
+    vol_change = 1;
+  }
+
+  //mute case
+  rotary_0_gpio_val(&gpio_val);
+  if(gpio_val == 1)//button pressed mute it is...
   {
    if(mute == 0)
    {
@@ -161,39 +190,5 @@ void volume_handler(void *pvParameter)
     vol_change = 0;
   }
 
- }
-}
-
-
-
-void input_handler(void *pvParameter)
-{
-uint8_t old = 0, tmp = 0, out_change = 0;
-
-old = get_active_relais();
-
- while(1)
- {
-	tmp = rotary_1_counter_val();
-
-	if(tmp != old)
-	{
-		old= (out_change == 0) ? tmp : old; //remeber the first old value to switch it off
-
-		//no output change yet, since writing output also writes nv ram
-		//update display already, when writing relais persist display as well
-		//relay writing on button press
-    inpDispWrite(tmp);
-		out_change = 1;
-	}
-
-	if(rotary_1_gpio_val() == 1 && out_change == 1) //button was pressed so we switch the selected output on
-	{
-		switch_relais_off(old);
-    inpDispWrite(tmp);
-		switch_relais_on(tmp);
-		out_change = 0;
-		old=tmp;
-	}
  }
 }

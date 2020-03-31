@@ -24,8 +24,8 @@ typedef struct relais_state
    uint8_t state[RELAIS_NUM];
 }relais_state;
 
-/* Init function, that sets the last stored 
- * nv relay sate active or initializes the 
+/* Init function, that sets the last stored
+ * nv relay sate active or initializes the
  * state struct if no values available  */
 esp_err_t init_relais( void );
 
@@ -36,6 +36,6 @@ esp_err_t switch_relais_on(uint8_t relais_num);
 esp_err_t switch_relais_off(uint8_t relais_num);
 
 /* get the currently active relais number */
-uint8_t get_active_relais( void );
+esp_err_t get_active_relais(uint8_t *active);
 
 #endif /* RELAIS_H */

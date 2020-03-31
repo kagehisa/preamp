@@ -297,39 +297,47 @@ esp_err_t rotary_init(quad_encoder_mode enc_mode)
 }
 
 //returns the value of the gpio pin that caused the interrupt
-//returns -1 in case of error or no new event
+//returns ESP_FAIL in case of error or no new event
 //must be called from within a task
-int8_t rotary_0_gpio_val( void )
+esp_err_t rotary_0_gpio_val( uint8_t *val )
 {
-  int8_t ret = -1;
+  esp_err_t ret = ESP_FAIL;
   portBASE_TYPE res;
   gpio_evt_t evt;
 
   res = xQueueReceive(gpio_evt_queues[0], &evt, GPIO_DELAY );
-  ret = (res == pdTRUE) ? evt.status : -1;
+  if(res == pdTRUE)
+  {
+    *val = evt.status;
+    ret = ESP_OK;
+  }
 
 return ret;
 }
 
 //returns the value of the gpio pin that caused the interrupt
-//returns -1 in case of error or no new event
+//returns ESP_FAIL in case of error or no new event
 //must be called from within a task
-int8_t rotary_1_gpio_val( void )
+esp_err_t rotary_1_gpio_val( uint8_t *val )
 {
-  int8_t ret = -1;
+  esp_err_t ret = ESP_FAIL;
   portBASE_TYPE res;
   gpio_evt_t evt;
 
   res = xQueueReceive(gpio_evt_queues[1], &evt, GPIO_DELAY );
-  ret = (res == pdTRUE) ? evt.status : -1;
+  if(res == pdTRUE)
+  {
+    *val = evt.status;
+    ret = ESP_OK;
+  }
 
 return ret;
 }
 
 //returns the sanitized counter value for the defined max, min boundaries
-//returns -1 in case of no evt received or error
+//returns ESP_FAIL in case of no evt received or error
 //must be called from within a task
-int8_t rotary_0_counter_val( void )
+esp_err_t rotary_0_counter_val( uint8_t *value )
 {
 
    static int16_t count = 0;
@@ -339,7 +347,7 @@ int8_t rotary_0_counter_val( void )
    static pcnt_evt_t evt;
 
    portBASE_TYPE res;
-   int8_t ret = -1;
+   esp_err_t ret = ESP_FAIL;
    /* Wait for the event information passed from PCNT's interrupt handler.
     * Once received, decode the event type and print it on the serial monitor.
     */
@@ -352,15 +360,16 @@ int8_t rotary_0_counter_val( void )
    {
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
      //MSG("| Reportet counter 0 :%2d |\n", rep_count);
-     return rep_count;
+     *value = rep_count;
+     ret = ESP_OK;
    }
   return ret;
 }
 
 //returns the sanitized counter value for the defined max, min boundaries
-//returns -1 in case of no evt received or error
+//returns ESP_FAIL in case of no evt received or error
 //must be called from within a task
-int8_t rotary_1_counter_val( void )
+esp_err_t rotary_1_counter_val( uint8_t *value )
 {
 
    static int16_t count = 0;
@@ -370,7 +379,7 @@ int8_t rotary_1_counter_val( void )
    static pcnt_evt_t evt;
 
    portBASE_TYPE res;
-   int8_t ret = -1;
+   esp_err_t ret = ESP_FAIL;
    /* Wait for the event information passed from PCNT's interrupt handler.
     * Once received, decode the event type and print it on the serial monitor.
     */
@@ -383,7 +392,8 @@ int8_t rotary_1_counter_val( void )
    {
      rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
      //MSG("| Reportet counter 1 :%2d |\n", rep_count);
-     return rep_count;
+     *value = rep_count;
+     ret = ESP_OK;
    }
  return ret;
 }

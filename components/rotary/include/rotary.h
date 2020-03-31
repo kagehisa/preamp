@@ -35,12 +35,12 @@ typedef struct {
 // enc mode: QUAD_ENC_MODE_1 => encoder counts upwards (standard)
 //           QUAD_ENC_MODE_2 => encoder counts downwards
 
-esp_err_t rotary_init(quad_encoder_mode enc_mode);
+esp_err_t rotary_init( quad_encoder_mode );
 
-int8_t rotary_0_counter_val( void );
-int8_t rotary_1_counter_val( void );
+esp_err_t rotary_0_counter_val( uint8_t* )
+esp_err_t rotary_1_counter_val( uint8_t* )
 
-int8_t rotary_0_gpio_val( void );
-int8_t rotary_1_gpio_val( void );
+esp_err_t rotary_0_gpio_val( uint8_t* )
+esp_err_t rotary_1_gpio_val( uint8_t* )
 
 #endif /* ROTARY_H */
