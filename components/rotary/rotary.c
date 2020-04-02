@@ -70,24 +70,6 @@ pcnt_config_t pcnt_0_config =
 
 };
 
-gpio_config_t gpio_enc_0_config =
-{
-   .pin_bit_mask = ENC_0_PIN_SEL,
-   .mode         = GPIO_MODE_INPUT,
-   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for a remotely attached sensor
-   .pull_down_en = GPIO_PULLDOWN_DISABLE,
-   .intr_type = GPIO_INTR_NEGEDGE,
-};
-
-gpio_config_t gpio_enc_1_config =
-{
-   .pin_bit_mask = ENC_1_PIN_SEL,
-   .mode         = GPIO_MODE_INPUT,
-   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for an remotely attached sensor
-   .pull_down_en = GPIO_PULLDOWN_DISABLE,
-   .intr_type = GPIO_INTR_NEGEDGE,
-};
-
 pcnt_config_t pcnt_1_config =
 {
     .pulse_gpio_num = PCNT1_PULSE_GPIO,
@@ -102,6 +84,26 @@ pcnt_config_t pcnt_1_config =
     .counter_l_lim = PCNT1_THRESH0_VAL,
 
 };
+
+gpio_config_t gpio_enc_0_config =
+{
+   .pin_bit_mask = ENC_0_PIN_SEL,
+   .mode         = GPIO_MODE_INPUT,
+   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for a remotely attached sensor
+   .pull_down_en = GPIO_PULLDOWN_ENABLE,
+   .intr_type = GPIO_INTR_POSEDGE,
+};
+
+gpio_config_t gpio_enc_1_config =
+{
+   .pin_bit_mask = ENC_1_PIN_SEL,
+   .mode         = GPIO_MODE_INPUT,
+   .pull_up_en   = GPIO_PULLUP_DISABLE, //using hw pullups for an remotely attached sensor
+   .pull_down_en = GPIO_PULLDOWN_ENABLE,
+   .intr_type = GPIO_INTR_POSEDGE,
+};
+
+
 
 xQueueHandle pcnt_evt_queues[USED_UNITS];// A queue to handle pulse counter events
 xQueueHandle gpio_evt_queues[USED_UNITS];// A queue to handle pulse counter events
@@ -142,7 +144,9 @@ static void IRAM_ATTR quad_enc_1_isr(void *arg)
       to pass it to the main program */
       evt.status = PCNT.status_unit[1].val;
       PCNT.int_clr.val = BIT(1);
+      ESP_LOGI(TAG, "From ISR: Before xqueue send");
       xQueueSendFromISR(pcnt_evt_queues[1], &evt, &HPTaskAwoken);
+      ESP_LOGI(TAG, "From ISR: After xqueue send");
       if (HPTaskAwoken == pdTRUE)
       {
         portYIELD_FROM_ISR();
@@ -154,20 +158,30 @@ static void IRAM_ATTR quad_enc_1_isr(void *arg)
 static void IRAM_ATTR gpio_isr_handler_0(void* arg)
 {
    gpio_evt_t evt;
+   portBASE_TYPE HPTaskAwoken = pdFALSE;
+
    evt.gpio_num = ENC0_SW_GPIO;
    evt.status = gpio_get_level(evt.gpio_num);
    xQueueSendFromISR(gpio_evt_queues[0], &evt, NULL);
-
+   if (HPTaskAwoken == pdTRUE)
+   {
+     portYIELD_FROM_ISR();
+   }
 }
 
 //get the level and enqueue it.
 static void IRAM_ATTR gpio_isr_handler_1(void* arg)
 {
    gpio_evt_t evt;
+   portBASE_TYPE HPTaskAwoken = pdFALSE;
+
    evt.gpio_num = ENC1_SW_GPIO;
    evt.status = gpio_get_level(evt.gpio_num);
    xQueueSendFromISR(gpio_evt_queues[1], &evt, NULL);
-
+   if (HPTaskAwoken == pdTRUE)
+   {
+     portYIELD_FROM_ISR();
+   }
 }
 
 static esp_err_t enc_0_gpio_init(void)
@@ -176,11 +190,14 @@ static esp_err_t enc_0_gpio_init(void)
   ESP_LOGI(TAG, "GPIO number for rot0 SWGPIO: %d", ENC0_SW_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot0 CTRL: %d", PCNT0_CONTROL_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot0 PULSE: %d", PCNT0_PULSE_GPIO);
+
   err = gpio_config(&gpio_enc_0_config);
   if(err != ESP_OK) {return err;}
+
   err = gpio_isr_handler_add(ENC0_SW_GPIO, gpio_isr_handler_0, NULL);
   if(err != ESP_OK) {return err;}
-  gpio_evt_queues[0]  = xQueueCreate(2, sizeof(gpio_evt_t));
+
+  gpio_evt_queues[0]  = xQueueCreate(5, sizeof(gpio_evt_t));
   return err;
 }
 
@@ -190,11 +207,14 @@ static esp_err_t enc_1_gpio_init(void)
   ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot1 CTRL: %d", PCNT1_CONTROL_GPIO);
   ESP_LOGI(TAG, "GPIO number for rot1 PULSE: %d", PCNT1_PULSE_GPIO);
+
   err = gpio_config(&gpio_enc_1_config);
   if(err != ESP_OK) {return err;}
+
   err = gpio_isr_handler_add(ENC1_SW_GPIO, gpio_isr_handler_1, NULL);
   if(err != ESP_OK) {return err;}
-  gpio_evt_queues[1]  = xQueueCreate(2, sizeof(gpio_evt_t));
+
+  gpio_evt_queues[1]  = xQueueCreate(5, sizeof(gpio_evt_t));
   return err;
 }
 
@@ -305,6 +325,7 @@ esp_err_t rotary_init(quad_encoder_mode enc_mode)
 
     err = enc_0_gpio_init();
     if(err != ESP_OK) {return err;}
+
     err = enc_1_gpio_init();
     if(err != ESP_OK) {return err;}
 
@@ -354,27 +375,32 @@ return ret;
 //must be called from within a task
 esp_err_t rotary_0_counter_val( uint8_t *value )
 {
-
    static int16_t count = 0;
    static int16_t old_count  = 0;
    static uint8_t rep_count = 0;
-   static pcnt_evt_t evt;
 
+   pcnt_evt_t evt;
+   portBASE_TYPE res;
    esp_err_t ret = ESP_FAIL;
 
    /* Wait for the event information passed from PCNT's interrupt handler.
     * Once received, decode the event type and print it on the serial monitor.
+    * We are only interested in the raw counter value so no real evt decoding needed
+    * hence the  != pdTRUE
     */
-   if (xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY) == pdTRUE)
+   res = xQueueReceive(pcnt_evt_queues[0], &evt, PCNT_DELAY);
+   old_count=count;
+   pcnt_get_counter_value(PCNT_UNIT_0, &count);
+
+   if(res != pdTRUE)
    {
-     old_count=count;
-     pcnt_get_counter_value(evt.unit, &count);
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
      ESP_LOGI(TAG, "Reportet counter0 :%2d ", rep_count);
      *value = rep_count;
 
      ret = ESP_OK;
    }
+
   return ret;
 }
 
@@ -383,26 +409,32 @@ esp_err_t rotary_0_counter_val( uint8_t *value )
 //must be called from within a task
 esp_err_t rotary_1_counter_val( uint8_t *value )
 {
-
    static int16_t count = 0;
    static int16_t old_count  = 0;
    static uint8_t rep_count = 0;
-   static pcnt_evt_t evt;
-   
+
+   pcnt_evt_t evt;
+   portBASE_TYPE res;
    esp_err_t ret = ESP_FAIL;
 
+
    /* Wait for the event information passed from PCNT's interrupt handler.
-    * Once received, decode the event type and print it on the serial monitor.
-    */
-   if (xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY) == pdTRUE)
+   * Once received, decode the event type and print it on the serial monitor.
+   * We are only interested in the raw counter value so no real evt decoding needed
+   * hence the  != pdTRUE
+   */
+   res = xQueueReceive(pcnt_evt_queues[1], &evt, PCNT_DELAY);
+   old_count=count;
+   pcnt_get_counter_value(PCNT_UNIT_1, &count);
+
+   if(res != pdTRUE)
    {
-     old_count=count;
-     pcnt_get_counter_value(evt.unit, &count);
      rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
      ESP_LOGI(TAG, "Reportet counter1 :%2d ", rep_count);
      *value = rep_count;
 
      ret = ESP_OK;
    }
+
  return ret;
 }

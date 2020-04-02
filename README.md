@@ -6,8 +6,8 @@ and the [Clone Note](http://www.buildanamp.com) LDR volume control.
 This readme is far from complete and also serves as a kind of log for me.
 
 ### TODO list software
-- add SSD1306 diplay driver to the project
-- check if a bitfield or union would suffice for volume_adg_val
+- TCP input server
+- debugging of rotary input handler
 
 ### TODO list Hardware
 - I2C line pullup before PCA9306 or after?

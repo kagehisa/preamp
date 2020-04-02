@@ -23,7 +23,7 @@ typedef struct {
 
 
 typedef struct {
-        uint8_t gpio_num;  // gpio unit that originated an interrupt;
+        uint32_t gpio_num;  // gpio unit that originated an interrupt;
         uint8_t status; //  type that caused the interrupt
 } gpio_evt_t;
 
