@@ -129,21 +129,21 @@ void rotary_handler(void *pvParameter)
  uint8_t oldIn = 0, tmpIn = 0, changeIn = 0;
  esp_err_t err;
 
- if ( system_init() == ESP_OK )
- {
-   ESP_LOGI(TAG, "System Init successfull!");
- }
+ if ( system_init() != ESP_OK )
+ { ESP_LOGE(TAG, "System Init FAILED!\n"); }
 
- get_fast_volume(&oldVol);
+ err = get_fast_volume(&oldVol);
+ if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Volume value FAILED!\n"); }
+
  err = get_active_relais(&oldIn);
- ESP_LOGI(TAG, "Value of err: %d, Active Relais: %d", err, oldIn);
+ if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Relais value FAILED!\n"); }
 
  while(1)
  {
   /*------------------------------------Input-----------------------------------*/
-  ESP_LOGI(TAG, "In the loop, input section!");
+
   err = rotary_1_counter_val(&tmpIn);
-  ESP_LOGI(TAG, "Value of tmpIn: %d, err: %d, Active Relais: %d \n", tmpIn, err, oldIn);
+  if( err == ESP_OK ){ ESP_LOGI(TAG, "Getting input Relais value: %d", tmpIn); }
 
   if(err == ESP_OK && tmpIn != oldIn)
   {
@@ -173,11 +173,17 @@ void rotary_handler(void *pvParameter)
 
 /*--------------------------------volume--------------------------------------*/
   ESP_LOGI(TAG, "In the loop, volume section!");
-  err = rotary_0_counter_val(&tmpVol);
-  ESP_LOGI(TAG, "Value of tmpVol: %d, err: %d, oldVol: %d \n", tmpVol, err, oldVol);
-  if(err == ESP_OK && tmpVol != oldVol && mute == 0)
+  //prevent volume change while beeing muted
+  if(mute == 0)
   {
-    set_volume(tmpVol);
+    err = rotary_0_counter_val(&tmpVol);
+    if( err == ESP_OK ){ ESP_LOGI(TAG, "Getting volume value: %d", tmpVol); }
+  }
+
+  if(err == ESP_OK && tmpVol != oldVol)
+  {
+    err = set_volume(tmpVol);
+    if( err != ESP_OK ){ ESP_LOGE(TAG, "Setting volume FAILED!"); }
     volDispWrite(tmpVol);
     oldVol = tmpVol;
     vol_change = 1;
@@ -185,7 +191,7 @@ void rotary_handler(void *pvParameter)
 
   //mute case
   err = rotary_0_gpio_val(&gpio_VolVal);
-  ESP_LOGI(TAG, "Mute Case after gpio_val get, Value of err: %d, vol_change: %d, gpio_val: %d \n", err, vol_change, gpio_VolVal);
+
   //button pressed: mute (mute = 0) or unmute (mute = 1)
   if(err == ESP_OK && gpio_VolVal == 1)
   {
@@ -194,26 +200,38 @@ void rotary_handler(void *pvParameter)
    if(mute == 0)
    {
      err = get_volume(&mutesave);
+
      if(err == ESP_OK)
      {
        //if fail enable a recovery
-       mute = (set_volume(0) == ESP_OK) ? 1 : 0;
-       volDispMute();
+       err = set_volume(0);
+       if(err == ESP_OK)
+       {
+         mute = 1;
+         ESP_LOGI(TAG, "Value of mutesave: %d", mutesave);
+         volDispMute();
+       }
+     }else{
+       ESP_LOGE(TAG, "Failed to get volume to set mutesave!");
      }
    }else{ //mute = 1
-        //if fail enable a recovery
-       mute = (set_volume(mutesave) == ESP_OK) ? 0 : 1;
-       volDispWrite(mutesave);
+       //if fail enable a recovery
+       err = set_volume(mutesave);
+       if( err == ESP_OK )
+       {
+         mute = 0;
+         volDispWrite(mutesave);
+       }
    }
 
   }//end of mute
-  ESP_LOGI(TAG, "Before timer_queue, Value of err: %d, vol_change: %d \n", err, vol_change);
+  //ESP_LOGI(TAG, "Before timer_queue, Value of err: %d, vol_change: %d \n", err, vol_change);
   // may fiddle with the queue waiting time..
   if(xQueueReceive( timer_queue, &volEvt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     ESP_LOGI(TAG, "Persisiting Volume value!");
-    pers_volume();
-    vol_change = 0;
+    err = pers_volume();
+    vol_change = (err == ESP_OK) ? 0 : 1;
   }
 
 

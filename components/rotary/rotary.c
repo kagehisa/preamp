@@ -51,8 +51,8 @@
 #define ENC_0_PIN_SEL		(1ULL << ENC0_SW_GPIO)
 #define ENC_1_PIN_SEL		(1ULL << ENC1_SW_GPIO)
 
-#define GPIO_DELAY             (1000 / portTICK_PERIOD_MS)
-#define PCNT_DELAY             (1000 / portTICK_PERIOD_MS)
+#define GPIO_DELAY             0 //(1000 / portTICK_PERIOD_MS)
+#define PCNT_DELAY             0 //(1000 / portTICK_PERIOD_MS)
 
 /* PCNT0 configuration please look at the init as well*/
 pcnt_config_t pcnt_0_config =
