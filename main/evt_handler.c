@@ -143,7 +143,7 @@ void rotary_handler(void *pvParameter)
   /*------------------------------------Input-----------------------------------*/
 
   err = rotary_1_counter_val(&tmpIn);
-  if( err == ESP_OK ){ ESP_LOGI(TAG, "Getting input Relais value: %d", tmpIn); }
+  if( err != ESP_OK ){ ESP_LOGI(TAG, "FAILED to get input Relais value: %d", tmpIn); }
 
   if(err == ESP_OK && tmpIn != oldIn)
   {
@@ -157,18 +157,24 @@ void rotary_handler(void *pvParameter)
     changeIn = 1;
   }
 
-  //switch on selected input
-  err = rotary_1_gpio_val(&gpio_InpVal);
 
-  //button was pressed so we switch the selected output on
-  if( err == ESP_OK && gpio_InpVal == 1 && changeIn == 1)
+  if(changeIn == 1)
   {
-    gpio_InpVal = 0;
-    switch_relais_off(oldIn);
-    inpDispWrite(tmpIn);
-    switch_relais_on(tmpIn);
-    changeIn = 0;
-    oldIn = tmpIn;
+    //TODO add timer to fall back to last selected input after a fixed time
+
+    //switch on selected input
+    err = rotary_1_gpio_val(&gpio_InpVal);
+
+    //button was pressed so we switch the selected output on
+    if( err == ESP_OK && gpio_InpVal == 1)
+    {
+      gpio_InpVal = 0;
+      switch_relais_off(oldIn);
+      inpDispWrite(tmpIn);
+      switch_relais_on(tmpIn);
+      changeIn = 0;
+      oldIn = tmpIn;
+    }
   }
 
 /*--------------------------------volume--------------------------------------*/
@@ -199,6 +205,10 @@ void rotary_handler(void *pvParameter)
 
    if(mute == 0)
    {
+     // halt counter to prevent mute doodling
+     err = encoder_0_pause_resume(0);
+     if( err != ESP_OK ){ ESP_LOGE(TAG, "FAILED to pause volume input !"); }
+
      err = get_volume(&mutesave);
 
      if(err == ESP_OK)
@@ -213,8 +223,12 @@ void rotary_handler(void *pvParameter)
        }
      }else{
        ESP_LOGE(TAG, "Failed to get volume to set mutesave!");
+       err = encoder_0_pause_resume(1);
+       if( err != ESP_OK ){ ESP_LOGE(TAG, "FAILED to resume volume input !"); }
      }
    }else{ //mute = 1
+       err = encoder_0_pause_resume(1);
+       if( err != ESP_OK ){ ESP_LOGE(TAG, "FAILED to resume volume input !"); }
        //if fail enable a recovery
        err = set_volume(mutesave);
        if( err == ESP_OK )
@@ -225,6 +239,7 @@ void rotary_handler(void *pvParameter)
    }
 
   }//end of mute
+
   //ESP_LOGI(TAG, "Before timer_queue, Value of err: %d, vol_change: %d \n", err, vol_change);
   // may fiddle with the queue waiting time..
   if(xQueueReceive( timer_queue, &volEvt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)

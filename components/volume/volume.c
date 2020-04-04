@@ -123,7 +123,7 @@ esp_err_t set_volume(uint8_t vol)
 
     for(i=0;i<UX_NUM; i++)
     {
-     /*TEST stubbed out the I2C call
+     /*TODO TEST stubbed out the I2C call
      ret = write_adg(ux_addr[i], adg_registers.regs[i]);
      */
      if (ret != ESP_OK){ return ret;  }
@@ -162,7 +162,7 @@ esp_err_t get_volume(uint8_t *vol)
 
   for(i=0;i<UX_NUM; i++)
   {
-    /*TEST remove later
+    /*TODO TEST remove later
     ret = read_adg(ux_addr[i], adg_registers.regs+i);
     */
     if (ret != ESP_OK){ return ret;  }
@@ -233,11 +233,12 @@ void volume_init( void )
    uint8_t i;
 
    /*
-   TEST removal: i2c_init();
+   TODO TEST removal
+   i2c_init();
    */
    //read current register configuration
    //from adg, else muting.
-/*TEST removal
+/*TODO TEST removal
    for(i=0; i<UX_NUM; i++)
    {
     ret = read_adg(ux_addr[i], adg_registers.regs+i);

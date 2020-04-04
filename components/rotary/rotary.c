@@ -144,9 +144,9 @@ static void IRAM_ATTR quad_enc_1_isr(void *arg)
       to pass it to the main program */
       evt.status = PCNT.status_unit[1].val;
       PCNT.int_clr.val = BIT(1);
-      ESP_LOGI(TAG, "From ISR: Before xqueue send");
+
       xQueueSendFromISR(pcnt_evt_queues[1], &evt, &HPTaskAwoken);
-      ESP_LOGI(TAG, "From ISR: After xqueue send");
+
       if (HPTaskAwoken == pdTRUE)
       {
         portYIELD_FROM_ISR();
@@ -187,9 +187,6 @@ static void IRAM_ATTR gpio_isr_handler_1(void* arg)
 static esp_err_t enc_0_gpio_init(void)
 {
   esp_err_t err = ESP_OK;
-  ESP_LOGI(TAG, "GPIO number for rot0 SWGPIO: %d", ENC0_SW_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot0 CTRL: %d", PCNT0_CONTROL_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot0 PULSE: %d", PCNT0_PULSE_GPIO);
 
   err = gpio_config(&gpio_enc_0_config);
   if(err != ESP_OK) {return err;}
@@ -204,9 +201,6 @@ static esp_err_t enc_0_gpio_init(void)
 static esp_err_t enc_1_gpio_init(void)
 {
   esp_err_t err = ESP_OK;
-  ESP_LOGI(TAG, "GPIO number for rot1 SWGPIO: %d", ENC1_SW_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot1 CTRL: %d", PCNT1_CONTROL_GPIO);
-  ESP_LOGI(TAG, "GPIO number for rot1 PULSE: %d", PCNT1_PULSE_GPIO);
 
   err = gpio_config(&gpio_enc_1_config);
   if(err != ESP_OK) {return err;}
@@ -311,6 +305,54 @@ return rep_count;
 
 }
 
+//only call after inits
+// state 0 = pause
+// state 1 = resume
+esp_err_t encoder_0_pause_resume(uint8_t state)
+{
+  esp_err_t err = ESP_FAIL;
+
+  if(state == 0)
+  {
+    err = pcnt_counter_pause(PCNT_UNIT_0);
+    err = pcnt_intr_disable(PCNT_UNIT_0);
+  }
+  if(state == 1)
+  {
+    err = pcnt_counter_resume(PCNT_UNIT_0);
+    err = pcnt_intr_enable(PCNT_UNIT_0);
+  }else{
+    err = ESP_ERR_INVALID_ARG;
+  }
+
+
+  return err;
+}
+
+//only call after inits
+// state 0 = pause
+// state 1 = resume
+esp_err_t encoder_1_pause_resume(uint8_t state)
+{
+  esp_err_t err = ESP_FAIL;
+
+  if(state == 0)
+  {
+    err = pcnt_counter_pause(PCNT_UNIT_1);
+    err = pcnt_intr_disable(PCNT_UNIT_1);
+  }
+  if(state == 1)
+  {
+    err = pcnt_counter_resume(PCNT_UNIT_1);
+    err = pcnt_intr_enable(PCNT_UNIT_1);
+  }else{
+    err = ESP_ERR_INVALID_ARG;
+  }
+
+
+  return err;
+}
+
 //initialize all used quad encoder modules and the gpio pins for the rotary switch function
 // enc mode: QUAD_ENC_MODE_1 => encoder counts upwards (standard)
 //           QUAD_ENC_MODE_2 => encoder counts downwards
@@ -395,7 +437,7 @@ esp_err_t rotary_0_counter_val( uint8_t *value )
    if(res != pdTRUE)
    {
      rep_count =  handle_pcnt(REP_0_MAX, REP_0_MIN, old_count, count, rep_count);
-     ESP_LOGI(TAG, "Reportet counter0 :%2d ", rep_count);
+     //ESP_LOGI(TAG, "Reportet counter0 :%2d ", rep_count);
      *value = rep_count;
 
      ret = ESP_OK;
@@ -430,7 +472,7 @@ esp_err_t rotary_1_counter_val( uint8_t *value )
    if(res != pdTRUE)
    {
      rep_count =  handle_pcnt(REP_1_MAX, REP_1_MIN, old_count, count, rep_count);
-     ESP_LOGI(TAG, "Reportet counter1 :%2d ", rep_count);
+     //ESP_LOGI(TAG, "Reportet counter1 :%2d ", rep_count);
      *value = rep_count;
 
      ret = ESP_OK;

@@ -43,4 +43,14 @@ esp_err_t rotary_1_counter_val( uint8_t *value );
 esp_err_t rotary_0_gpio_val( uint8_t *val );
 esp_err_t rotary_1_gpio_val( uint8_t *val );
 
+//only call after inits
+// state 0 = pause
+// state 1 = resume
+esp_err_t encoder_0_pause_resume(uint8_t state);
+
+//only call after inits
+// state 0 = pause
+// state 1 = resume
+esp_err_t encoder_1_pause_resume(uint8_t state);
+
 #endif /* ROTARY_H */

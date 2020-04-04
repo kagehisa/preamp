@@ -7,7 +7,7 @@ This readme is far from complete and also serves as a kind of log for me.
 
 ### TODO list software
 - TCP input server
-- debugging of rotary input handler
+
 
 ### TODO list Hardware
 - I2C line pullup before PCA9306 or after?
