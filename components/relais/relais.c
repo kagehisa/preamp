@@ -101,12 +101,12 @@ esp_err_t init_relais( void )
    uint8_t active=0;
 
    ret = init_relais_state();
-   ESP_LOGI(TAG, "debug msg init func; ret = %i \n", ret);
+
    if(ret == ESP_OK)
    {
      ret = get_active_relais(&active);
-		 ESP_LOGI(TAG, "active = %i \n", active);
-     if(active != 0)
+
+     if( ret == ESP_OK && active != 0)
      {
 			 ESP_LOGI(TAG, "switching on %i \n", active);
        ret = switch_relais_on(active);

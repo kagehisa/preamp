@@ -51,7 +51,10 @@ void IRAM_ATTR timer_group0_isr(void *para)
   if(changeIn > 1)
   {
     changeIn -= 1;
-  }else{
+  }
+
+  if(changeIn == 1)
+  {
     inEvt = 1;
     xQueueSendFromISR(inputTimer_queue, &inEvt, NULL);
   }
@@ -146,9 +149,9 @@ void rotary_handler(void *pvParameter)
 
  err = get_fast_volume(&oldVol);
  if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Volume value FAILED!\n"); }
-
- err = get_active_relais(&oldIn);
- if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Relais value FAILED!\n"); }
+ //TODO: maybe skip this
+ //err = get_active_relais(&oldIn);
+ //if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Relais value FAILED!\n"); }
 
  while(1)
  {
@@ -170,36 +173,39 @@ void rotary_handler(void *pvParameter)
   }
 
 
-  if(changeIn != 0)
+  if(changeIn > 0)
   {
       //switch on selected input
       err = rotary_1_gpio_val(&gpio_InpVal);
-
+      ESP_LOGI(TAG, "GPIO_InputVal: %d     ChangeIn: %d", gpio_InpVal, changeIn);
       //button was pressed so we switch the selected output on
       if( err == ESP_OK && gpio_InpVal == 1)
       {
+        ESP_LOGI(TAG, "Writing output!");
         gpio_InpVal = 0;
         switch_relais_off(oldIn);
         inpDispWrite(tmpIn);
         switch_relais_on(tmpIn);
         changeIn = 0;
         oldIn = tmpIn;
-      }
 
-      //too much time since input knob was used, revert the temp screen settings
-      if( ( xQueueReceive( inputTimer_queue, &inEvt, 0 ) == pdTRUE ) && changeIn != 0)
-      {
-        inpDispWrite(oldIn);
-        changeIn = 0;
       }
   }
+
+  //too much time since input knob was used, revert the temp screen settings
+  if( ( xQueueReceive( inputTimer_queue, &inEvt, 0 ) == pdTRUE ) && changeIn > 0)
+  {
+    ESP_LOGI(TAG, "Discarding Output!");
+    inpDispWrite(oldIn);
+    changeIn = 0;
+  }
 /*--------------------------------volume--------------------------------------*/
-  ESP_LOGI(TAG, "In the loop, volume section!");
+  //ESP_LOGI(TAG, "In the loop, volume section!");
   //prevent volume change while beeing muted
   if(mute == 0)
   {
     err = rotary_0_counter_val(&tmpVol);
-    if( err == ESP_OK ){ ESP_LOGI(TAG, "Getting volume value: %d", tmpVol); }
+    if( err != ESP_OK ){ ESP_LOGI(TAG, "No new Volume value."); }
   }
 
   if(err == ESP_OK && tmpVol != oldVol)
