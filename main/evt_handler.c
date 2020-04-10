@@ -32,7 +32,8 @@
 
 
 static volatile uint8_t vol_change;
-xQueueHandle timer_queue;
+static volatile uint8_t changeIn;
+xQueueHandle volumeTimer_queue, inputTimer_queue;
 
 
 /* Timer ISR to generate a event and enqueue it.
@@ -42,15 +43,23 @@ void IRAM_ATTR timer_group0_isr(void *para)
 {
   int timer_idx = (int) para;
 
-  uint8_t evt;
+  uint8_t volEvt, inEvt;
   uint32_t intr_status = TIMERG0.int_st_timers.val;
 
   TIMERG0.hw_timer[timer_idx].update = 1;
 
+  if(changeIn > 1)
+  {
+    changeIn -= 1;
+  }else{
+    inEvt = 1;
+    xQueueSendFromISR(inputTimer_queue, &inEvt, NULL);
+  }
+
   if(vol_change == 1)
   {
-    evt = 1;
-    xQueueSendFromISR(timer_queue, &evt, NULL);
+    volEvt = 1;
+    xQueueSendFromISR(volumeTimer_queue, &volEvt, NULL);
   }
 
   //re enable interrupt and re enable the alarm
@@ -104,8 +113,10 @@ static esp_err_t system_init(void)
   init_relais();
   initInpDispl();
 
-  timer_queue = xQueueCreate( 2, sizeof( uint8_t * ) );
-   if( timer_queue == 0 )
+  volumeTimer_queue = xQueueCreate( 2, sizeof( uint8_t * ) );
+  inputTimer_queue = xQueueCreate( 2, sizeof( uint8_t * ) );
+
+   if( volumeTimer_queue == 0 || inputTimer_queue == 0 )
    {
        err = ESP_FAIL;
    }
@@ -125,9 +136,10 @@ void rotary_handler(void *pvParameter)
 {
  uint8_t oldVol = 0, tmpVol = 0;
  uint8_t mute = 0, mutesave = 0;
- uint8_t volEvt, gpio_VolVal, gpio_InpVal;
- uint8_t oldIn = 0, tmpIn = 0, changeIn = 0;
+ uint8_t volEvt, inEvt, gpio_VolVal, gpio_InpVal;
+ uint8_t oldIn = 0, tmpIn = 0;
  esp_err_t err;
+ changeIn = 0;
 
  if ( system_init() != ESP_OK )
  { ESP_LOGE(TAG, "System Init FAILED!\n"); }
@@ -154,29 +166,33 @@ void rotary_handler(void *pvParameter)
     //update display already, when writing relais persist display as well
     //relay writing on button press
     inpDispWrite(tmpIn);
-    changeIn = 1;
+    changeIn += 1;
   }
 
 
-  if(changeIn == 1)
+  if(changeIn != 0)
   {
-    //TODO add timer to fall back to last selected input after a fixed time
+      //switch on selected input
+      err = rotary_1_gpio_val(&gpio_InpVal);
 
-    //switch on selected input
-    err = rotary_1_gpio_val(&gpio_InpVal);
+      //button was pressed so we switch the selected output on
+      if( err == ESP_OK && gpio_InpVal == 1)
+      {
+        gpio_InpVal = 0;
+        switch_relais_off(oldIn);
+        inpDispWrite(tmpIn);
+        switch_relais_on(tmpIn);
+        changeIn = 0;
+        oldIn = tmpIn;
+      }
 
-    //button was pressed so we switch the selected output on
-    if( err == ESP_OK && gpio_InpVal == 1)
-    {
-      gpio_InpVal = 0;
-      switch_relais_off(oldIn);
-      inpDispWrite(tmpIn);
-      switch_relais_on(tmpIn);
-      changeIn = 0;
-      oldIn = tmpIn;
-    }
+      //too much time since input knob was used, revert the temp screen settings
+      if( ( xQueueReceive( inputTimer_queue, &inEvt, 0 ) == pdTRUE ) && changeIn != 0)
+      {
+        inpDispWrite(oldIn);
+        changeIn = 0;
+      }
   }
-
 /*--------------------------------volume--------------------------------------*/
   ESP_LOGI(TAG, "In the loop, volume section!");
   //prevent volume change while beeing muted
@@ -242,7 +258,7 @@ void rotary_handler(void *pvParameter)
 
   //ESP_LOGI(TAG, "Before timer_queue, Value of err: %d, vol_change: %d \n", err, vol_change);
   // may fiddle with the queue waiting time..
-  if(xQueueReceive( timer_queue, &volEvt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
+  if(xQueueReceive( volumeTimer_queue, &volEvt, (50 / portTICK_PERIOD_MS) ) == pdTRUE)
   {
     ESP_LOGI(TAG, "Persisiting Volume value!");
     err = pers_volume();
