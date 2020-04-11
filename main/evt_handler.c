@@ -140,7 +140,7 @@ void rotary_handler(void *pvParameter)
  uint8_t oldVol = 0, tmpVol = 0;
  uint8_t mute = 0, mutesave = 0;
  uint8_t volEvt, inEvt, gpio_VolVal, gpio_InpVal;
- uint8_t oldIn = 0, tmpIn = 0;
+ uint8_t oldIn = 1, tmpIn = 1;
  esp_err_t err;
  changeIn = 0;
 
@@ -149,9 +149,9 @@ void rotary_handler(void *pvParameter)
 
  err = get_fast_volume(&oldVol);
  if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Volume value FAILED!\n"); }
- //TODO: maybe skip this
- //err = get_active_relais(&oldIn);
- //if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Relais value FAILED!\n"); }
+
+ err = get_active_relais(&oldIn);
+ if( err != ESP_OK ){ ESP_LOGE(TAG, "Getting initial Relais value FAILED!\n"); }
 
  while(1)
  {
@@ -159,7 +159,7 @@ void rotary_handler(void *pvParameter)
 
   err = rotary_1_counter_val(&tmpIn);
   if( err != ESP_OK ){ ESP_LOGI(TAG, "FAILED to get input Relais value: %d", tmpIn); }
-
+  ESP_LOGI(TAG, "tmpIn: %d    oldIn: %d", tmpIn, oldIn);
   if(err == ESP_OK && tmpIn != oldIn)
   {
     //remeber the first old value to switch it off
@@ -188,17 +188,18 @@ void rotary_handler(void *pvParameter)
         switch_relais_on(tmpIn);
         changeIn = 0;
         oldIn = tmpIn;
-
+      }
+      //too much time since input knob was used, revert the temp screen settings
+      if( ( xQueueReceive( inputTimer_queue, &inEvt, 0 ) == pdTRUE ) && changeIn > 0)
+      {
+        ESP_LOGI(TAG, "Discarding Output!");
+        tmpIn = oldIn;
+        changeIn = 0;
+        inpDispWrite(tmpIn);
       }
   }
 
-  //too much time since input knob was used, revert the temp screen settings
-  if( ( xQueueReceive( inputTimer_queue, &inEvt, 0 ) == pdTRUE ) && changeIn > 0)
-  {
-    ESP_LOGI(TAG, "Discarding Output!");
-    inpDispWrite(oldIn);
-    changeIn = 0;
-  }
+
 /*--------------------------------volume--------------------------------------*/
   //ESP_LOGI(TAG, "In the loop, volume section!");
   //prevent volume change while beeing muted
